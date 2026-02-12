@@ -136,9 +136,6 @@
       })()
     </script>
 
-    <!-- Recaptcha -->
-    <script src="https://www.google.com/recaptcha/api.js?render=6Lfm0k0qAAAAACf7Sb0yIFa-fDWEyAAVO3KtEkbq"></script>
-
   </head>
 
 
@@ -191,40 +188,8 @@
                             <a class="nav-link" href="{{ url_for('home') }}" aria-expanded="false">Home</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('about') }}">About</a>
-                        </li>
-                        <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('contact') }}">Contact</a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('web_leaderboard') }}">Leaderboard</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('faq_page') }}">FAQ's</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('locations') }}">Locations</a>
-                        </li>
-
-                        {% if not current_user.is_authenticated %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('login') }}">Sign In / Up</a>
-                        </li>
-                        {% endif %}
-
-                        {% if current_user.is_authenticated %}
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">Account</a>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="{{ url_for('overview') }}">Overview</a></li>
-                                <li><a class="dropdown-item" href="{{ url_for('settings') }}">Settings</a></li>
-                            </ul>
-                        </li>
-
-                        <li class="nav-item ms-lg-auto">
-                            <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
-                        </li>
-                        {% endif %}
                     </ul>
                 </nav>
         </div>
@@ -368,9 +333,6 @@
                   {% endif %}
                 {% endwith %}
 
-                <!-- Hidden reCAPTCHA v3 input -->
-                <input type="hidden" id="recaptcha_token" name="recaptcha_token">
-
                 <div class="col-sm-12 text-center pt-4">
                   <button class="btn btn-lg btn-light" type="submit">Send a request</button>
                 </div>
@@ -409,13 +371,6 @@
             <div class="row row-cols-2">
               <div class="col">
                 <ul class="nav flex-column pb-4 mb-2 pb-md-5 mb-lg-1">
-
-                  <li class="nav-item mt-1">
-                    <a class="nav-link py-1 px-0" href="{{ url_for('faq_page') }}">Product details</a>
-                  </li>
-                  <li class="nav-item mt-1">
-                    <a class="nav-link py-1 px-0" href="{{ url_for('privacy_policy') }}">Privacy policy</a>
-                  </li>
                 </ul>
                 <div class="d-flex">
                   <a class="btn btn-icon btn-sm btn-secondary btn-instagram rounded-circle me-3" href="https://www.instagram.com/cannacheckkiosk?igsh=aTdpYmhzamN5Ympw&utm_source=qr" aria-label="Instagram">
@@ -433,9 +388,6 @@
                 <ul class="nav flex-column">
                   <li class="nav-item mt-1">
                     <a class="nav-link py-1 px-0 small-text" href="{{ url_for('contact') }}">Contact us</a>
-                  </li>
-                  <li class="nav-item mt-1">
-                    <a class="nav-link py-1 px-0" href="{{ url_for('about') }}">About us</a>
                   </li>
 
                 </ul>
@@ -456,16 +408,6 @@
 {#      </svg>#}
 {#      <i class="ai-arrow-up"></i>#}
 {#    </a>#}
-
-    <!-- reCAPTCHA v3 script for generating token -->
-    <script>
-      grecaptcha.ready(function() {
-        grecaptcha.execute('6Lfm0k0qAAAAACf7Sb0yIFa-fDWEyAAVO3KtEkbq', {action: 'contact'}).then(function(token) {
-           // Add the token to the hidden input field
-           document.getElementById('recaptcha_token').value = token;
-        });
-      });
-    </script>
 
     <!-- Bootstrap + Theme scripts -->
     <script src="../static/assets/js/theme.min.js"></script>
