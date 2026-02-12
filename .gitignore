@@ -10,6 +10,8 @@ venv/
 
 # Env files / secrets
 .env
+.env.local
+.env.*.local
 
 # macOS
 .DS_Store
@@ -17,3 +19,16 @@ venv/
 # Logs
 *.log
 logs/
+
+# IDEs
+.idea/
+.vscode/
+
+# Python tooling
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Flask
+instance/

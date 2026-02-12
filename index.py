@@ -39,6 +39,31 @@ app.config["SECRET_KEY"] = os.getenv("FLASK_KEY", "dev-only-change-me") #change 
 #     status = db.Column(db.String(50), nullable=False, default="pending")  # for the agentic pipeline
 #     agent_result = db.Column(db.Text, nullable=True)  # optional
 
+# BELOW DB CLASS FOR WAYFINDER
+# class WayfinderSubmission(db.Model):
+#     __tablename__ = "wayfinder_submission"
+#
+#     id = db.Column(db.Integer, primary_key=True)
+#     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+#
+#     # Core traveler info
+#     traveler_name = db.Column(db.String(200), nullable=False)
+#     email = db.Column(db.String(200), nullable=True)
+#
+#     # Travel-specific fields
+#     origin = db.Column(db.String(200), nullable=True)
+#     desired_destination = db.Column(db.String(200), nullable=True)
+#     travel_dates = db.Column(db.String(200), nullable=True)
+#     budget = db.Column(db.String(100), nullable=True)
+#
+#     # Freeform input
+#     preferences = db.Column(db.Text, nullable=True)
+#     raw_request = db.Column(db.Text, nullable=False)
+#
+#     # AI pipeline fields
+#     status = db.Column(db.String(50), nullable=False, default="pending")
+#     agent_result = db.Column(db.Text, nullable=True)
+
 
 @app.context_processor
 def inject_globals():
