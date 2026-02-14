@@ -64,12 +64,6 @@ app.config["SECRET_KEY"] = os.getenv("FLASK_KEY", "dev-only-change-me") #change 
 #     status = db.Column(db.String(50), nullable=False, default="pending")
 #     agent_result = db.Column(db.Text, nullable=True)
 
-
-@app.context_processor
-def inject_globals():
-    # needed the footer: {{ current_year }}
-    return {"current_year": datetime.now().year}
-
 @app.route("/", methods=["GET"])
 def home():
     # Changed to new landing (contact)
@@ -118,7 +112,7 @@ def contact():
 
 @app.route("/api/submissions/<int:submission_id>", methods=["GET"])
 def get_submission(submission_id: int):
-    """Optional helper endpoint for your agentic service to fetch a submission."""
+    """ helper endpoint for agentic service to fetch a submission."""
     submission = Submission.query.get_or_404(submission_id)
     return jsonify(
         {
