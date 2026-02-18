@@ -22,7 +22,7 @@ Current phase:
 
 ---
 
-## Local Setup
+## Local Mac Setup
 
 ### 1. Clone the repo
 
@@ -43,8 +43,43 @@ source .venv/bin/activate
 ```bash
 pip install flask python-dotenv flask-sqlalchemy
 ```
+# Local Windows Setup
 
-### 4. Environment variables
+### 1. Clone the repo
+
+```bash
+git clone https://github.com/mjmaho19/Wayfinder_AI.git
+cd Wayfinder_AI
+```
+
+### 2. Create virtual environment
+
+```bash
+python -m venv venv
+Activate virtual environment
+```
+
+### 3. Command
+```bash
+﻿Prompt venv\Scripts\activate 
+```
+ 
+### 4. PowerShell 
+```bash
+﻿venv\Scripts\Activate.ps1
+```
+
+If PowerShell blocks the script with an execution policy error, run this first:
+
+```bash
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+### 5. Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+# Environment Variables (all systems)
 
 Copy the example file:
 
