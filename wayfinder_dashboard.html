@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wayfinder – Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0f0f11;
+      --surface:  #17171a;
+      --surface2: #1e1e23;
+      --border:   rgba(255,255,255,0.07);
+      --text:     #e8e8ec;
+      --muted:    #7c7c8a;
+      --accent:   #5b8dff;
+      --accent2:  #a78bfa;
+      --green:    #34d399;
+      --amber:    #fbbf24;
+      --radius:   16px;
+      --radius-sm:10px;
+      --shadow:   0 8px 32px rgba(0,0,0,0.45);
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      overflow: hidden;
+    }
+
+    /* ─── HEADER ─────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+      height: 58px;
+      background: rgba(15,15,17,0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      position: relative;
+      z-index: 20;
+    }
+
+    .logo {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+    .logo-word {
+      font-family: 'Instrument Serif', serif;
+      font-size: 22px;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+    .logo-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      margin-bottom: 2px;
+    }
+    .logo-tag {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-left: 4px;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .pill {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      padding: 5px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .pill .status-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    /* ─── LAYOUT ─────────────────────────────── */
+    .app {
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 58px);
+      padding: 20px;
+      gap: 16px;
+    }
+
+    /* top row: map + sidebar */
+    .top-row {
+      display: flex;
+      gap: 16px;
+      flex: 0 0 auto;
+      height: 52vh;
+      min-height: 320px;
+    }
+
+    /* ─── MAP ────────────────────────────────── */
+    .map-wrapper {
+      flex: 1;
+      position: relative;
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+      background: #141820;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* SVG placeholder map */
+    .map-svg {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      inset: 0;
+    }
+
+    .map-overlay-tl {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 5;
+    }
+    .map-search {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(23,23,26,0.92);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 14px;
+      width: 280px;
+    }
+    .map-search input {
+      background: none;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 13px;
+      width: 100%;
+    }
+    .map-search input::placeholder { color: var(--muted); }
+    .map-search svg { flex-shrink: 0; }
+
+    .map-controls {
+      position: absolute;
+      bottom: 14px;
+      right: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      z-index: 5;
+    }
+    .map-btn {
+      width: 36px; height: 36px;
+      background: rgba(23,23,26,0.92);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      color: var(--muted);
+      transition: color .2s, border-color .2s;
+    }
+    .map-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.18); }
+
+    /* Pin markers */
+    .pin {
+      position: absolute;
+      transform: translate(-50%, -100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity .3s, transform .3s;
+      z-index: 4;
+    }
+    .pin.visible { opacity: 1; }
+    .pin-bubble {
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 500;
+      white-space: nowrap;
+      color: var(--text);
+      box-shadow: var(--shadow);
+      display: none;
+    }
+    .pin.active .pin-bubble { display: block; }
+    .pin-icon {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 15px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      border: 2px solid rgba(255,255,255,0.15);
+      transition: transform .2s;
+    }
+    .pin:hover .pin-icon { transform: scale(1.15); }
+    .pin-stem {
+      width: 2px; height: 8px;
+      background: currentColor;
+      opacity: 0.5;
+    }
+
+    .pin.type-restaurant .pin-icon { background: #ff6b6b; color: #fff; }
+    .pin.type-restaurant { color: #ff6b6b; }
+    .pin.type-shop .pin-icon { background: var(--accent); color: #fff; }
+    .pin.type-shop { color: var(--accent); }
+    .pin.type-hotel .pin-icon { background: var(--accent2); color: #fff; }
+    .pin.type-hotel { color: var(--accent2); }
+    .pin.type-bathroom .pin-icon { background: var(--green); color: #fff; }
+    .pin.type-bathroom { color: var(--green); }
+
+    /* ─── SIDEBAR BUTTONS ────────────────────── */
+    .sidebar {
+      width: 72px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .filter-btn {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: background .2s, border-color .2s, transform .15s;
+      position: relative;
+      overflow: hidden;
+      color: var(--muted);
+    }
+    .filter-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      transition: opacity .2s;
+    }
+    .filter-btn:hover { transform: scale(1.03); color: var(--text); }
+    .filter-btn:hover::before { opacity: 1; }
+
+    .filter-btn.active {
+      border-color: transparent;
+      color: #fff;
+    }
+    .filter-btn.active::before { opacity: 1; }
+
+    .filter-btn[data-type="restaurant"]::before { background: linear-gradient(160deg, rgba(255,107,107,.25), rgba(255,107,107,.05)); }
+    .filter-btn[data-type="restaurant"].active { background: rgba(255,107,107,.18); border-color: rgba(255,107,107,.4); }
+    .filter-btn[data-type="shop"]::before { background: linear-gradient(160deg, rgba(91,141,255,.25), rgba(91,141,255,.05)); }
+    .filter-btn[data-type="shop"].active { background: rgba(91,141,255,.18); border-color: rgba(91,141,255,.4); }
+    .filter-btn[data-type="hotel"]::before { background: linear-gradient(160deg, rgba(167,139,250,.25), rgba(167,139,250,.05)); }
+    .filter-btn[data-type="hotel"].active { background: rgba(167,139,250,.18); border-color: rgba(167,139,250,.4); }
+    .filter-btn[data-type="bathroom"]::before { background: linear-gradient(160deg, rgba(52,211,153,.25), rgba(52,211,153,.05)); }
+    .filter-btn[data-type="bathroom"].active { background: rgba(52,211,153,.18); border-color: rgba(52,211,153,.4); }
+    .filter-btn[data-type="poi"]::before { background: linear-gradient(160deg, rgba(251,191,36,.25), rgba(251,191,36,.05)); }
+    .filter-btn[data-type="poi"].active { background: rgba(251,191,36,.18); border-color: rgba(251,191,36,.4); }
+
+    .filter-icon { font-size: 22px; line-height: 1; }
+    .filter-label { font-size: 9px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+
+    /* ─── RESULTS PANEL ──────────────────────── */
+    .results-panel {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .results-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .results-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .results-count {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      padding: 2px 9px;
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 500;
+    }
+    .results-meta {
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .results-list {
+      overflow-y: auto;
+      flex: 1;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .results-list::-webkit-scrollbar { width: 4px; }
+    .results-list::-webkit-scrollbar-track { background: transparent; }
+    .results-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* Empty / placeholder state */
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: var(--muted);
+      padding: 40px;
+      text-align: center;
+    }
+    .empty-icon { font-size: 36px; opacity: .4; }
+    .empty-text { font-size: 13px; line-height: 1.5; }
+
+    /* ─── RESULT CARD ────────────────────────── */
+    .card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      animation: cardIn .25s ease both;
+    }
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .card:hover {
+      background: rgba(255,255,255,0.04);
+      border-color: rgba(255,255,255,0.14);
+    }
+
+    .card-icon {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .card-body { flex: 1; min-width: 0; }
+    .card-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .card-sub {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .card-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .badge {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px 8px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--muted);
+    }
+    .stars {
+      color: var(--amber);
+      font-size: 11px;
+      letter-spacing: -1px;
+    }
+    .dist {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    /* ─── COLUMN HEADERS ─────────────────────── */
+    .col-headers {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 0 16px 8px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .col-headers .ch-name { flex: 1; padding-left: 54px; }
+    .col-headers .ch-right { display: flex; gap: 24px; font-size: 10px; }
+  </style>
+</head>
+<body>
+
+<!-- ─── HEADER ──────────────────────────────────── -->
+<header>
+  <div class="logo">
+    <span class="logo-word">Wayfinder</span>
+    <div class="logo-dot"></div>
+    <span class="logo-tag">Beta</span>
+  </div>
+  <div class="header-right">
+    <div class="pill">
+      <span class="status-dot"></span>
+      Within 10 mi · San Francisco, CA
+    </div>
+    <div class="avatar">JD</div>
+  </div>
+</header>
+
+<!-- ─── APP BODY ────────────────────────────────── -->
+<div class="app">
+
+  <!-- TOP: Map + Sidebar -->
+  <div class="top-row">
+
+    <!-- MAP -->
+    <div class="map-wrapper">
+      <div id="map">
+        <!-- Stylized SVG placeholder map -->
+        <svg class="map-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" preserveAspectRatio="xMidYMid slice">
+          <!-- Background -->
+          <rect width="900" height="520" fill="#141820"/>
+          <!-- Grid lines subtle -->
+          <g stroke="#1c2030" stroke-width="1">
+            <line x1="0" y1="104" x2="900" y2="104"/>
+            <line x1="0" y1="208" x2="900" y2="208"/>
+            <line x1="0" y1="312" x2="900" y2="312"/>
+            <line x1="0" y1="416" x2="900" y2="416"/>
+            <line x1="180" y1="0" x2="180" y2="520"/>
+            <line x1="360" y1="0" x2="360" y2="520"/>
+            <line x1="540" y1="0" x2="540" y2="520"/>
+            <line x1="720" y1="0" x2="720" y2="520"/>
+          </g>
+          <!-- Roads major -->
+          <g stroke="#222840" stroke-width="14" stroke-linecap="round">
+            <line x1="0" y1="260" x2="900" y2="260"/>
+            <line x1="450" y1="0" x2="450" y2="520"/>
+            <line x1="0" y1="150" x2="900" y2="370"/>
+            <line x1="0" y1="400" x2="900" y2="120"/>
+          </g>
+          <!-- Roads minor -->
+          <g stroke="#1d2236" stroke-width="6" stroke-linecap="round">
+            <line x1="0" y1="180" x2="900" y2="180"/>
+            <line x1="0" y1="340" x2="900" y2="340"/>
+            <line x1="270" y1="0" x2="270" y2="520"/>
+            <line x1="630" y1="0" x2="630" y2="520"/>
+            <line x1="100" y1="0" x2="800" y2="520"/>
+            <line x1="800" y1="0" x2="100" y2="520"/>
+          </g>
+          <!-- Blocks / buildings -->
+          <g fill="#192030" rx="3">
+            <rect x="50" y="40" width="80" height="60" rx="4"/>
+            <rect x="160" y="60" width="60" height="40" rx="4"/>
+            <rect x="50" y="140" width="100" height="20" rx="4"/>
+            <rect x="300" y="40" width="100" height="80" rx="4"/>
+            <rect x="420" y="30" width="60" height="90" rx="4"/>
+            <rect x="520" y="50" width="80" height="60" rx="4"/>
+            <rect x="640" y="40" width="60" height="70" rx="4"/>
+            <rect x="730" y="30" width="120" height="80" rx="4"/>
+            <rect x="50" y="290" width="120" height="90" rx="4"/>
+            <rect x="200" y="300" width="80" height="60" rx="4"/>
+            <rect x="310" y="290" width="100" height="80" rx="4"/>
+            <rect x="490" y="300" width="80" height="70" rx="4"/>
+            <rect x="600" y="280" width="120" height="90" rx="4"/>
+            <rect x="750" y="290" width="100" height="80" rx="4"/>
+            <rect x="80" y="430" width="80" height="60" rx="4"/>
+            <rect x="200" y="420" width="120" height="70" rx="4"/>
+            <rect x="370" y="430" width="80" height="60" rx="4"/>
+            <rect x="500" y="420" width="100" height="70" rx="4"/>
+            <rect x="640" y="430" width="80" height="60" rx="4"/>
+            <rect x="760" y="420" width="100" height="70" rx="4"/>
+          </g>
+          <!-- Water body -->
+          <path d="M0 460 Q150 440 300 470 Q450 500 600 465 Q750 440 900 460 L900 520 L0 520 Z" fill="#111a2c" opacity=".9"/>
+          <!-- radius circle -->
+          <circle cx="450" cy="260" r="200" fill="none" stroke="rgba(91,141,255,0.12)" stroke-width="1.5" stroke-dasharray="6 4"/>
+          <!-- Center marker -->
+          <circle cx="450" cy="260" r="6" fill="var(--accent)" opacity="0.9"/>
+          <circle cx="450" cy="260" r="14" fill="none" stroke="rgba(91,141,255,0.35)" stroke-width="1.5"/>
+        </svg>
+
+        <!-- Dynamic pins injected by JS -->
+        <div id="pins"></div>
+
+        <!-- Map search -->
+        <div class="map-overlay-tl">
+          <div class="map-search">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" color="#7c7c8a">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+            <input type="text" placeholder="Search locations…" />
+          </div>
+        </div>
+
+        <!-- Map controls -->
+        <div class="map-controls">
+          <div class="map-btn" title="Zoom in">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+          <div class="map-btn" title="Zoom out">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+          <div class="map-btn" title="My location">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIDEBAR FILTERS -->
+    <div class="sidebar">
+      <button class="filter-btn" data-type="restaurant" title="Restaurants">
+        <span class="filter-icon">🍽️</span>
+        <span class="filter-label">Eat</span>
+      </button>
+      <button class="filter-btn" data-type="shop" title="Shops">
+        <span class="filter-icon">🛍️</span>
+        <span class="filter-label">Shop</span>
+      </button>
+      <button class="filter-btn" data-type="hotel" title="Hotels">
+        <span class="filter-icon">🏨</span>
+        <span class="filter-label">Stay</span>
+      </button>
+      <button class="filter-btn" data-type="bathroom" title="Bathrooms">
+        <span class="filter-icon">🚻</span>
+        <span class="filter-label">WC</span>
+      </button>
+      <button class="filter-btn" data-type="poi" title="Points of Interest">
+        <span class="filter-icon">📍</span>
+        <span class="filter-label">Explore</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- BOTTOM: Results panel -->
+  <div class="results-panel">
+    <div class="results-header">
+      <div class="results-title">
+        <span id="results-label">Nearby Locations</span>
+        <span class="results-count" id="results-count">—</span>
+      </div>
+      <div class="results-meta">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Within 10 miles · Sorted by distance
+      </div>
+    </div>
+
+    <!-- Column headers (shown when results are visible) -->
+    <div class="col-headers" id="col-headers" style="display:none">
+      <span class="ch-name" id="ch-name">Name</span>
+      <div class="ch-right" id="ch-right"></div>
+    </div>
+
+    <div class="results-list" id="results-list">
+      <div class="empty-state">
+        <div class="empty-icon">🗺️</div>
+        <div class="empty-text">Select a category from the sidebar<br/>to explore nearby locations</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── DATA ───────────────────────────────────────────────────────────────
+const data = {
+  restaurant: [
+    { name: "The Gilded Fork",    sub: "New American",    price: "$$$", rating: 4.8, dist: "0.4 mi",  icon: "🍽️", x: 38, y: 42 },
+    { name: "Sakura Ramen",       sub: "Japanese",         price: "$$",  rating: 4.6, dist: "0.9 mi",  icon: "🍜", x: 62, y: 35 },
+    { name: "Casa Bonita",        sub: "Mexican",          price: "$$",  rating: 4.3, dist: "1.2 mi",  icon: "🌮", x: 55, y: 65 },
+    { name: "Margherita & Co.",   sub: "Italian Pizza",    price: "$$",  rating: 4.5, dist: "1.8 mi",  icon: "🍕", x: 30, y: 60 },
+    { name: "The Spice Garden",   sub: "Indian",           price: "$$",  rating: 4.7, dist: "2.3 mi",  icon: "🍛", x: 70, y: 58 },
+    { name: "Harbor Grill",       sub: "Seafood",          price: "$$$", rating: 4.9, dist: "3.1 mi",  icon: "🦞", x: 78, y: 45 },
+  ],
+  shop: [
+    { name: "Apex Outfitters",    rating: 4.4, dist: "0.6 mi",  icon: "🧥", x: 44, y: 38 },
+    { name: "Bloom Market",       rating: 4.6, dist: "1.0 mi",  icon: "🌸", x: 35, y: 53 },
+    { name: "Tech Universe",      rating: 4.2, dist: "1.5 mi",  icon: "💻", x: 60, y: 48 },
+    { name: "The Book Nook",      rating: 4.8, dist: "2.0 mi",  icon: "📚", x: 68, y: 62 },
+    { name: "Craft Supply Co.",   rating: 4.3, dist: "2.8 mi",  icon: "✂️", x: 25, y: 48 },
+  ],
+  hotel: [
+    { name: "The Meridian",       price: "$289/night", rating: 4.7, dist: "0.7 mi",  icon: "🏨", x: 50, y: 32 },
+    { name: "Harborview Suites",  price: "$195/night", rating: 4.4, dist: "1.3 mi",  icon: "🏩", x: 66, y: 40 },
+    { name: "Nomad Hotel",        price: "$140/night", rating: 4.2, dist: "2.1 mi",  icon: "🏪", x: 34, y: 44 },
+    { name: "Grand Pacific",      price: "$420/night", rating: 4.9, dist: "2.6 mi",  icon: "🏰", x: 72, y: 55 },
+  ],
+  bathroom: [
+    { name: "City Park Restroom", sub: "Unisex",    dist: "0.3 mi",  icon: "🚻", x: 46, y: 55 },
+    { name: "Transit Hub WC",     sub: "Separate",  dist: "0.8 mi",  icon: "🚺", x: 58, y: 42 },
+    { name: "Mall Facilities",    sub: "Separate",  dist: "1.4 mi",  icon: "🚹", x: 40, y: 65 },
+    { name: "Library Restroom",   sub: "Unisex",    dist: "1.9 mi",  icon: "🚻", x: 64, y: 68 },
+  ],
+  poi: [
+    { name: "Coming Soon",        sub: "Points of interest will be available in the next update.", dist: "—", icon: "📍", x: 50, y: 50 },
+  ]
+};
+
+const accentColors = {
+  restaurant: { bg: "rgba(255,107,107,.18)", fg: "#ff6b6b" },
+  shop:       { bg: "rgba(91,141,255,.18)",  fg: "#5b8dff" },
+  hotel:      { bg: "rgba(167,139,250,.18)", fg: "#a78bfa" },
+  bathroom:   { bg: "rgba(52,211,153,.18)",  fg: "#34d399" },
+  poi:        { bg: "rgba(251,191,36,.18)",  fg: "#fbbf24" },
+};
+
+const labels = {
+  restaurant: "Restaurants",
+  shop: "Shops",
+  hotel: "Hotels",
+  bathroom: "Restrooms",
+  poi: "Points of Interest"
+};
+
+const colHeaders = {
+  restaurant: { right: ["Type","Price","Rating","Distance"] },
+  shop:       { right: ["Rating","Distance"] },
+  hotel:      { right: ["Price/Night","Rating","Distance"] },
+  bathroom:   { right: ["Type","Distance"] },
+  poi:        { right: ["Distance"] },
+};
+
+// ─── RENDER ─────────────────────────────────────────────────────────────
+let currentType = null;
+
+function starsHTML(rating) {
+  const full = Math.round(rating);
+  return '★'.repeat(full) + '☆'.repeat(5-full) + ` ${rating}`;
+}
+
+function renderCard(item, type) {
+  const c = accentColors[type];
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.style.animationDelay = `${Math.random() * 0.15}s`;
+
+  let rightHTML = '';
+  if (type === 'restaurant') {
+    rightHTML = `
+      <span class="badge">${item.sub}</span>
+      <span class="badge">${item.price}</span>
+      <span class="stars">${starsHTML(item.rating)}</span>
+      <span class="dist">📍 ${item.dist}</span>`;
+  } else if (type === 'shop') {
+    rightHTML = `
+      <span class="stars">${starsHTML(item.rating)}</span>
+      <span class="dist">📍 ${item.dist}</span>`;
+  } else if (type === 'hotel') {
+    rightHTML = `
+      <span class="badge">${item.price}</span>
+      <span class="stars">${starsHTML(item.rating)}</span>
+      <span class="dist">📍 ${item.dist}</span>`;
+  } else if (type === 'bathroom') {
+    rightHTML = `
+      <span class="badge">${item.sub}</span>
+      <span class="dist">📍 ${item.dist}</span>`;
+  } else {
+    rightHTML = `<span class="dist">📍 ${item.dist}</span>`;
+  }
+
+  card.innerHTML = `
+    <div class="card-icon" style="background:${c.bg}; font-size:20px">${item.icon}</div>
+    <div class="card-body">
+      <div class="card-name">${item.name}</div>
+      ${item.sub && type !== 'bathroom' ? `<div class="card-sub">${type === 'restaurant' ? '' : item.sub}</div>` : ''}
+    </div>
+    <div class="card-right">${rightHTML}</div>
+  `;
+  return card;
+}
+
+function renderPins(type) {
+  const pinsEl = document.getElementById('pins');
+  pinsEl.innerHTML = '';
+  const mapEl = document.getElementById('map');
+  const mw = mapEl.offsetWidth, mh = mapEl.offsetHeight;
+
+  data[type].forEach((item, i) => {
+    const pin = document.createElement('div');
+    pin.className = `pin type-${type}`;
+    pin.style.left = (item.x / 100 * mw) + 'px';
+    pin.style.top  = (item.y / 100 * mh) + 'px';
+    pin.innerHTML = `
+      <div class="pin-bubble">${item.name}</div>
+      <div class="pin-icon">${item.icon}</div>
+      <div class="pin-stem"></div>
+    `;
+    pinsEl.appendChild(pin);
+    setTimeout(() => pin.classList.add('visible'), i * 60);
+    pin.addEventListener('click', () => {
+      document.querySelectorAll('.pin').forEach(p => p.classList.remove('active'));
+      pin.classList.toggle('active');
+    });
+  });
+}
+
+function selectType(type) {
+  currentType = type;
+  const items = data[type];
+  const list = document.getElementById('results-list');
+  const label = document.getElementById('results-label');
+  const count = document.getElementById('results-count');
+  const colH = document.getElementById('col-headers');
+
+  label.textContent = labels[type];
+  count.textContent = `${items.length} found`;
+
+  // Column header right side
+  const chRight = document.getElementById('ch-right');
+  chRight.innerHTML = colHeaders[type].right.map(h => `<span>${h}</span>`).join('');
+  colH.style.display = 'flex';
+
+  list.innerHTML = '';
+  items.forEach(item => list.appendChild(renderCard(item, type)));
+
+  renderPins(type);
+
+  // Button states
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.type === type);
+  });
+}
+
+// ─── EVENTS ─────────────────────────────────────────────────────────────
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (currentType === btn.dataset.type) {
+      // Deselect
+      currentType = null;
+      btn.classList.remove('active');
+      document.getElementById('pins').innerHTML = '';
+      document.getElementById('results-list').innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">🗺️</div>
+          <div class="empty-text">Select a category from the sidebar<br/>to explore nearby locations</div>
+        </div>`;
+      document.getElementById('results-label').textContent = 'Nearby Locations';
+      document.getElementById('results-count').textContent = '—';
+      document.getElementById('col-headers').style.display = 'none';
+    } else {
+      selectType(btn.dataset.type);
+    }
+  });
+});
+</script>
+</body>
+</html>
