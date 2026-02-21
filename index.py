@@ -6,40 +6,24 @@ from datetime import datetime
 import os
 
 from dotenv import load_dotenv
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 
 load_dotenv()
 
 app = Flask(__name__)
-application = app  # keeps compatibility with some hosting setups
+application = app
 
 # ---- Core config ----
-app.config["SECRET_KEY"] = os.getenv("FLASK_KEY", "dev-only-change-me") #change for new project
-# # For new project, set DATABASE_URL in .env (include sslmode if needed)
+app.config["SECRET_KEY"] = os.getenv("FLASK_KEY", "dev-only-change-me")
+
+# For new project, set DATABASE_URL in .env (include sslmode if needed)
 # app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
 # app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 #
 # db = SQLAlchemy(app)
 
-
-# # ---- DB model for submissions ----
-# class Submission(db.Model):
-#     __tablename__ = "submission"
-#
-#     id = db.Column(db.Integer, primary_key=True)
-#     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-#
-#     name = db.Column(db.String(200), nullable=False)
-#     company = db.Column(db.String(200), nullable=True)
-#     email = db.Column(db.String(200), nullable=True)
-#     phone = db.Column(db.String(50), nullable=True)
-#     message = db.Column(db.Text, nullable=False)
-#
-#     status = db.Column(db.String(50), nullable=False, default="pending")  # for the agentic pipeline
-#     agent_result = db.Column(db.Text, nullable=True)  # optional
-
-# BELOW DB CLASS FOR WAYFINDER
+# ---- DB model (disabled for now) ----
 # class WayfinderSubmission(db.Model):
 #     __tablename__ = "wayfinder_submission"
 #
@@ -64,69 +48,56 @@ app.config["SECRET_KEY"] = os.getenv("FLASK_KEY", "dev-only-change-me") #change 
 #     status = db.Column(db.String(50), nullable=False, default="pending")
 #     agent_result = db.Column(db.Text, nullable=True)
 
+
 @app.route("/", methods=["GET"])
 def home():
-    # Changed to new landing (contact)
-    return redirect(url_for("contact"))
+    """Redirect root to travel request page."""
+    return redirect(url_for("request_trip"))
 
 
-@app.route("/contact", methods=["GET", "POST"])
-def contact():
+@app.route("/request", methods=["GET", "POST"])
+def request_trip():
     """
-    Reused contact-form route:
-    - GET renders template
-    - POST writes submission to DB
+    Main Wayfinder request route.
+    GET -> render travel form
+    POST -> process travel request
     """
     if request.method == "POST":
-
-        # Get form fields (match your template input names)
-        name = (request.form.get("name") or "").strip()
-        company = (request.form.get("company") or "").strip() or None
+        # ---- Get form data (matches HTML exactly) ----
+        traveler_name = (request.form.get("traveler_name") or "").strip()
         email = (request.form.get("email") or "").strip().lower() or None
-        phone = (request.form.get("phone") or "").strip() or None
-        message = (request.form.get("message") or "").strip()
+        origin = (request.form.get("origin") or "").strip() or None
+        desired_destination = (request.form.get("desired_destination") or "").strip() or None
+        travel_dates = (request.form.get("travel_dates") or "").strip() or None
+        budget = (request.form.get("budget") or "").strip() or None
+        preferences = (request.form.get("preferences") or "").strip() or None
+        raw_request = (request.form.get("raw_request") or "").strip()
 
-        # Basic validation (adjust as needed)
-        if not name or not message:
-            flash("Please include your name and a message.", "danger")
-            return redirect(url_for("contact"))
+        # ---- Basic validation ----
+        if not traveler_name or not raw_request:
+            flash("Please include your name and trip description.", "danger")
+            return redirect(url_for("request_trip"))
 
-        submission = Submission(
-            name=name,
-            company=company,
-            email=email,
-            phone=phone,
-            message=message,
-        )
+        # ---- Create submission (DB disabled for now) ----
+        # submission = WayfinderSubmission(
+        #     traveler_name=traveler_name,
+        #     email=email,
+        #     origin=origin,
+        #     desired_destination=desired_destination,
+        #     travel_dates=travel_dates,
+        #     budget=budget,
+        #     preferences=preferences,
+        #     raw_request=raw_request,
+        # )
         # db.session.add(submission)
         # db.session.commit()
 
-        # If you want agentic AI to pick it up, you can return JSON or redirect
-        # For now we’ll redirect and show a success flash:
-        flash("Submitted successfully!", "success")
-        return redirect(url_for("contact"))
+        flash("Trip request submitted! Wayfinder is working on your plan.", "success")
 
-    # IMPORTANT: keep this filename aligned with the template you copied
-    return render_template("contacts-v1.html")
+        # Later: redirect to dashboard
+        return redirect(url_for("request_trip"))
 
-
-@app.route("/api/submissions/<int:submission_id>", methods=["GET"])
-def get_submission(submission_id: int):
-    """ helper endpoint for agentic service to fetch a submission."""
-    submission = Submission.query.get_or_404(submission_id)
-    return jsonify(
-        {
-            "id": submission.id,
-            "created_at": submission.created_at.isoformat(),
-            "name": submission.name,
-            "company": submission.company,
-            "email": submission.email,
-            "phone": submission.phone,
-            "message": submission.message,
-            "status": submission.status,
-            "agent_result": submission.agent_result,
-        }
-    )
+    return render_template("request.html")
 
 
 if __name__ == "__main__":
