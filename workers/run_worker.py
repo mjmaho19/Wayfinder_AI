@@ -16,7 +16,6 @@ from index import app, db, WayfinderSubmission, AgentTask, ToolResult, TripPlan 
 from agents.supervisor import run_supervisor
 from tools.weather_tool import run as run_weather
 from tools.places_tool import run as run_places
-from tools.lodging_tool import run as run_lodging
 from tools.transit_tool import run as run_transit
 
 
@@ -26,7 +25,6 @@ WORKER_ID = os.getenv("WAYFINDER_WORKER_ID") or socket.gethostname()
 TOOL_RUNNERS = {
     "weather": run_weather,
     "places": run_places,
-    "lodging": run_lodging,
     "transit": run_transit,
 }
 

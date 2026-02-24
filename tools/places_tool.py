@@ -104,7 +104,7 @@ def _to_item(p: dict[str, Any], item_type: str, center: dict[str, float] | None)
         "rating": float(rating) if isinstance(rating, (int, float)) else None,
         "distance_mi": dist_mi,
         "icon": icon_map.get(item_type, "📍"),
-        # optional: keep coordinates for pins (your dashboard supports x/y, but we can add lat/lng later)
+        # keep coordinates for pins (your dashboard supports x/y, but we can add lat/lng later)
         "lat": float(lat) if isinstance(lat, (int, float)) else None,
         "lng": float(lng) if isinstance(lng, (int, float)) else None,
     }

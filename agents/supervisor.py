@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 
-REQUIRED_TOOLS = ["weather", "places", "lodging", "transit"]
+REQUIRED_TOOLS = ["weather", "places", "transit"]
 
 
 def _index_results(tool_results: list[dict]) -> dict[str, Any]:
@@ -70,7 +70,6 @@ def run_supervisor(
         "sections": {
             "weather": results.get("weather"),
             "places": results.get("places"),
-            "lodging": results.get("lodging"),
             "transit": results.get("transit"),
         },
         "meta": {

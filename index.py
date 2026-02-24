@@ -65,7 +65,7 @@ class AgentTask(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
     submission_id = db.Column(db.Integer, db.ForeignKey("wayfinder_submission.id"), nullable=False, index=True)
-    task_type = db.Column(db.String(50), nullable=False)  # e.g., "weather", "places", "lodging", "transit"
+    task_type = db.Column(db.String(50), nullable=False)  # e.g., "weather", "places", "transit"
     status = db.Column(db.String(50), nullable=False, default="pending")  # pending/running/completed/failed
 
     input_json = db.Column(db.Text, nullable=True)
@@ -153,7 +153,7 @@ def request_trip():
         db.session.add(submission)
         db.session.commit()
 
-        starter_tasks = ["weather", "places", "lodging", "transit"]
+        starter_tasks = ["weather", "places", "transit"]
         for t in starter_tasks:
             db.session.add(
                 AgentTask(
