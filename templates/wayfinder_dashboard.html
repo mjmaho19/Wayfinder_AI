@@ -654,39 +654,14 @@
 </div>
 
 <script>
-// ─── DATA ───────────────────────────────────────────────────────────────
-const data = {
-  restaurant: [
-    { name: "The Gilded Fork",    sub: "New American",    price: "$$$", rating: 4.8, dist: "0.4 mi",  icon: "🍽️", x: 38, y: 42 },
-    { name: "Sakura Ramen",       sub: "Japanese",         price: "$$",  rating: 4.6, dist: "0.9 mi",  icon: "🍜", x: 62, y: 35 },
-    { name: "Casa Bonita",        sub: "Mexican",          price: "$$",  rating: 4.3, dist: "1.2 mi",  icon: "🌮", x: 55, y: 65 },
-    { name: "Margherita & Co.",   sub: "Italian Pizza",    price: "$$",  rating: 4.5, dist: "1.8 mi",  icon: "🍕", x: 30, y: 60 },
-    { name: "The Spice Garden",   sub: "Indian",           price: "$$",  rating: 4.7, dist: "2.3 mi",  icon: "🍛", x: 70, y: 58 },
-    { name: "Harbor Grill",       sub: "Seafood",          price: "$$$", rating: 4.9, dist: "3.1 mi",  icon: "🦞", x: 78, y: 45 },
-  ],
-  shop: [
-    { name: "Apex Outfitters",    rating: 4.4, dist: "0.6 mi",  icon: "🧥", x: 44, y: 38 },
-    { name: "Bloom Market",       rating: 4.6, dist: "1.0 mi",  icon: "🌸", x: 35, y: 53 },
-    { name: "Tech Universe",      rating: 4.2, dist: "1.5 mi",  icon: "💻", x: 60, y: 48 },
-    { name: "The Book Nook",      rating: 4.8, dist: "2.0 mi",  icon: "📚", x: 68, y: 62 },
-    { name: "Craft Supply Co.",   rating: 4.3, dist: "2.8 mi",  icon: "✂️", x: 25, y: 48 },
-  ],
-  hotel: [
-    { name: "The Meridian",       price: "$289/night", rating: 4.7, dist: "0.7 mi",  icon: "🏨", x: 50, y: 32 },
-    { name: "Harborview Suites",  price: "$195/night", rating: 4.4, dist: "1.3 mi",  icon: "🏩", x: 66, y: 40 },
-    { name: "Nomad Hotel",        price: "$140/night", rating: 4.2, dist: "2.1 mi",  icon: "🏪", x: 34, y: 44 },
-    { name: "Grand Pacific",      price: "$420/night", rating: 4.9, dist: "2.6 mi",  icon: "🏰", x: 72, y: 55 },
-  ],
-  bathroom: [
-    { name: "City Park Restroom", sub: "Unisex",    dist: "0.3 mi",  icon: "🚻", x: 46, y: 55 },
-    { name: "Transit Hub WC",     sub: "Separate",  dist: "0.8 mi",  icon: "🚺", x: 58, y: 42 },
-    { name: "Mall Facilities",    sub: "Separate",  dist: "1.4 mi",  icon: "🚹", x: 40, y: 65 },
-    { name: "Library Restroom",   sub: "Unisex",    dist: "1.9 mi",  icon: "🚻", x: 64, y: 68 },
-  ],
-  poi: [
-    { name: "Coming Soon",        sub: "Points of interest will be available in the next update.", dist: "—", icon: "📍", x: 50, y: 50 },
-  ]
-};
+/**
+ * Wayfinder dashboard (Choice #1):
+ * - Polls /api/latest
+ * - Reads ToolResult where tool_name === "places"
+ * - Parses result_json
+ * - Groups payload.items by item.type into UI categories:
+ *     restaurant, shop, hotel, bathroom, poi
+ */
 
 const accentColors = {
   restaurant: { bg: "rgba(255,107,107,.18)", fg: "#ff6b6b" },
@@ -712,12 +687,116 @@ const colHeaders = {
   poi:        { right: ["Distance"] },
 };
 
-// ─── RENDER ─────────────────────────────────────────────────────────────
-let currentType = null;
+// ---- Data store ----
+let data = {
+  restaurant: [],
+  shop: [],
+  hotel: [],
+  bathroom: [],
+  poi: [],
+};
 
+let currentType = null;
+let lastSubmissionId = null;
+
+// ---- UI helpers ----
+function setEmptyState() {
+  currentType = null;
+  document.getElementById('pins').innerHTML = '';
+  document.getElementById('results-list').innerHTML = `
+    <div class="empty-state">
+      <div class="empty-icon">🗺️</div>
+      <div class="empty-text">No submission yet.<br/>Submit a trip request to see results here.</div>
+    </div>`;
+  document.getElementById('results-label').textContent = 'Nearby Locations';
+  document.getElementById('results-count').textContent = '—';
+  document.getElementById('col-headers').style.display = 'none';
+  document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+}
+
+function setSelectPromptState() {
+  currentType = null;
+  document.getElementById('pins').innerHTML = '';
+  document.getElementById('results-list').innerHTML = `
+    <div class="empty-state">
+      <div class="empty-icon">🗺️</div>
+      <div class="empty-text">Select a category from the sidebar<br/>to explore nearby locations</div>
+    </div>`;
+  document.getElementById('results-label').textContent = 'Nearby Locations';
+  document.getElementById('results-count').textContent = '—';
+  document.getElementById('col-headers').style.display = 'none';
+  document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+}
+
+function setButtonsEnabled(enabledTypesSet) {
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    const t = btn.dataset.type;
+    const hasData = enabledTypesSet.has(t);
+    btn.disabled = !hasData;
+    btn.style.opacity = hasData ? '1' : '0.35';
+    btn.style.cursor = hasData ? 'pointer' : 'not-allowed';
+  });
+}
+
+// ---- Rendering ----
 function starsHTML(rating) {
-  const full = Math.round(rating);
-  return '★'.repeat(full) + '☆'.repeat(5-full) + ` ${rating}`;
+  const r = Number(rating);
+  if (!Number.isFinite(r)) return '';
+  const full = Math.round(r);
+  return '★'.repeat(full) + '☆'.repeat(5-full) + ` ${r}`;
+}
+
+function _fmtDistance(item) {
+  // supports either dist (legacy) or distance_mi (Choice #1)
+  if (item.dist) return item.dist;
+  const dm = item.distance_mi;
+  if (typeof dm === 'number') return `${dm} mi`;
+  if (typeof dm === 'string' && dm.trim()) return dm;
+  return '—';
+}
+
+function _normalizeForUI(item, type) {
+  // normalize fields so the existing card renderer can stay mostly the same
+  const out = { ...item };
+
+  // name
+  out.name = out.name ?? 'Unknown';
+
+  // sub / type label
+  // restaurants: show cuisine/type if present, else use item.type
+  if (type === 'restaurant') {
+    out.sub = out.sub ?? out.cuisine ?? out.primary_type ?? 'Restaurant';
+  }
+
+  // bathrooms: the template expects item.sub
+  if (type === 'bathroom') {
+    out.sub = out.sub ?? out.note ?? 'Public';
+  }
+
+  // hotels: price formatting
+  if (type === 'hotel') {
+    if (out.price && typeof out.price === 'number') {
+      out.price = `$${out.price}/night`;
+    }
+    if (out.price_per_night && typeof out.price_per_night === 'number') {
+      out.price = `$${out.price_per_night}/night`;
+    }
+  }
+
+  // distance
+  out.dist = _fmtDistance(out);
+
+  // icon defaults if tool doesn’t provide
+  const iconDefaults = {
+    restaurant: '🍽️',
+    shop: '🛍️',
+    hotel: '🏨',
+    bathroom: '🚻',
+    poi: '📍'
+  };
+  out.icon = out.icon ?? iconDefaults[type] ?? '📍';
+
+  return out;
 }
 
 function renderCard(item, type) {
@@ -729,31 +808,31 @@ function renderCard(item, type) {
   let rightHTML = '';
   if (type === 'restaurant') {
     rightHTML = `
-      <span class="badge">${item.sub}</span>
-      <span class="badge">${item.price}</span>
+      <span class="badge">${item.sub ?? ''}</span>
+      <span class="badge">${item.price ?? ''}</span>
       <span class="stars">${starsHTML(item.rating)}</span>
-      <span class="dist">📍 ${item.dist}</span>`;
+      <span class="dist">📍 ${item.dist ?? '—'}</span>`;
   } else if (type === 'shop') {
     rightHTML = `
       <span class="stars">${starsHTML(item.rating)}</span>
-      <span class="dist">📍 ${item.dist}</span>`;
+      <span class="dist">📍 ${item.dist ?? '—'}</span>`;
   } else if (type === 'hotel') {
     rightHTML = `
-      <span class="badge">${item.price}</span>
+      <span class="badge">${item.price ?? ''}</span>
       <span class="stars">${starsHTML(item.rating)}</span>
-      <span class="dist">📍 ${item.dist}</span>`;
+      <span class="dist">📍 ${item.dist ?? '—'}</span>`;
   } else if (type === 'bathroom') {
     rightHTML = `
-      <span class="badge">${item.sub}</span>
-      <span class="dist">📍 ${item.dist}</span>`;
+      <span class="badge">${item.sub ?? ''}</span>
+      <span class="dist">📍 ${item.dist ?? '—'}</span>`;
   } else {
-    rightHTML = `<span class="dist">📍 ${item.dist}</span>`;
+    rightHTML = `<span class="dist">📍 ${item.dist ?? '—'}</span>`;
   }
 
   card.innerHTML = `
-    <div class="card-icon" style="background:${c.bg}; font-size:20px">${item.icon}</div>
+    <div class="card-icon" style="background:${c.bg}; font-size:20px">${item.icon ?? '📍'}</div>
     <div class="card-body">
-      <div class="card-name">${item.name}</div>
+      <div class="card-name">${item.name ?? 'Unknown'}</div>
       ${item.sub && type !== 'bathroom' ? `<div class="card-sub">${type === 'restaurant' ? '' : item.sub}</div>` : ''}
     </div>
     <div class="card-right">${rightHTML}</div>
@@ -767,14 +846,18 @@ function renderPins(type) {
   const mapEl = document.getElementById('map');
   const mw = mapEl.offsetWidth, mh = mapEl.offsetHeight;
 
-  data[type].forEach((item, i) => {
+  (data[type] || []).forEach((item, i) => {
+    // If x/y missing, scatter lightly so pins still show
+    const x = (typeof item.x === 'number') ? item.x : (20 + Math.random() * 60);
+    const y = (typeof item.y === 'number') ? item.y : (25 + Math.random() * 50);
+
     const pin = document.createElement('div');
     pin.className = `pin type-${type}`;
-    pin.style.left = (item.x / 100 * mw) + 'px';
-    pin.style.top  = (item.y / 100 * mh) + 'px';
+    pin.style.left = (x / 100 * mw) + 'px';
+    pin.style.top  = (y / 100 * mh) + 'px';
     pin.innerHTML = `
-      <div class="pin-bubble">${item.name}</div>
-      <div class="pin-icon">${item.icon}</div>
+      <div class="pin-bubble">${item.name ?? 'Location'}</div>
+      <div class="pin-icon">${item.icon ?? '📍'}</div>
       <div class="pin-stem"></div>
     `;
     pinsEl.appendChild(pin);
@@ -788,18 +871,18 @@ function renderPins(type) {
 
 function selectType(type) {
   currentType = type;
-  const items = data[type];
+  const items = data[type] || [];
   const list = document.getElementById('results-list');
   const label = document.getElementById('results-label');
   const count = document.getElementById('results-count');
   const colH = document.getElementById('col-headers');
 
-  label.textContent = labels[type];
+  label.textContent = labels[type] || 'Nearby Locations';
   count.textContent = `${items.length} found`;
 
   // Column header right side
   const chRight = document.getElementById('ch-right');
-  chRight.innerHTML = colHeaders[type].right.map(h => `<span>${h}</span>`).join('');
+  chRight.innerHTML = (colHeaders[type]?.right || []).map(h => `<span>${h}</span>`).join('');
   colH.style.display = 'flex';
 
   list.innerHTML = '';
@@ -813,27 +896,107 @@ function selectType(type) {
   });
 }
 
-// ─── EVENTS ─────────────────────────────────────────────────────────────
+// ---- Choice #1 parsing ----
+function parsePlacesResultJson(resultJson) {
+  try {
+    return JSON.parse(resultJson);
+  } catch (e) {
+    return null;
+  }
+}
+
+function applyLatestPayload(latest) {
+  // Reset data
+  data = { restaurant: [], shop: [], hotel: [], bathroom: [], poi: [] };
+  const enabledTypes = new Set();
+
+  // Find ToolResult row where tool_name === "places"
+  const toolResults = latest?.tool_results || [];
+  const placesRow = toolResults.find(tr => tr.tool_name === 'places');
+
+  if (!placesRow) {
+    // no places yet
+    setButtonsEnabled(new Set());
+    setSelectPromptState();
+    return;
+  }
+
+  const placesPayload = parsePlacesResultJson(placesRow.result_json);
+  const items = Array.isArray(placesPayload?.items) ? placesPayload.items : [];
+
+  // Group items by item.type
+  for (const item of items) {
+    const t = (item?.type || '').toLowerCase();
+    if (!data[t]) continue; // ignore unknown types
+
+    const normalized = _normalizeForUI(item, t);
+    data[t].push(normalized);
+  }
+
+  // enable types that have at least 1 item
+  Object.keys(data).forEach(t => {
+    if ((data[t] || []).length > 0) enabledTypes.add(t);
+  });
+
+  setButtonsEnabled(enabledTypes);
+
+  // Keep selection if still available
+  if (currentType && enabledTypes.has(currentType)) {
+    selectType(currentType);
+  } else {
+    setSelectPromptState();
+  }
+}
+
+// ---- Polling ----
+async function pollLatest() {
+  try {
+    const res = await fetch('/api/latest', { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+
+    if (!json.ok || !json.latest) {
+      lastSubmissionId = null;
+      setButtonsEnabled(new Set());
+      setEmptyState();
+      return;
+    }
+
+    const latest = json.latest;
+
+    // New submission -> reset UI selection
+    if (latest.id !== lastSubmissionId) {
+      lastSubmissionId = latest.id;
+      currentType = null;
+      document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+    }
+
+    applyLatestPayload(latest);
+  } catch (err) {
+    console.warn('pollLatest failed:', err);
+  }
+}
+
+// ---- Events ----
 document.querySelectorAll('.filter-btn').forEach(btn => {
   btn.addEventListener('click', () => {
+    if (btn.disabled) return;
+
     if (currentType === btn.dataset.type) {
-      // Deselect
       currentType = null;
       btn.classList.remove('active');
       document.getElementById('pins').innerHTML = '';
-      document.getElementById('results-list').innerHTML = `
-        <div class="empty-state">
-          <div class="empty-icon">🗺️</div>
-          <div class="empty-text">Select a category from the sidebar<br/>to explore nearby locations</div>
-        </div>`;
-      document.getElementById('results-label').textContent = 'Nearby Locations';
-      document.getElementById('results-count').textContent = '—';
-      document.getElementById('col-headers').style.display = 'none';
+      setSelectPromptState();
     } else {
       selectType(btn.dataset.type);
     }
   });
 });
+
+// ---- Init ----
+setEmptyState();
+pollLatest();
+setInterval(pollLatest, 3000);
 </script>
 </body>
 </html>

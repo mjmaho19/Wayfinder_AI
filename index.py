@@ -9,6 +9,7 @@ import json
 from dotenv import load_dotenv
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 
 load_dotenv()
 
@@ -24,8 +25,10 @@ if not database_url:
 
 app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["FLASK_APP"] = "index.py"
 
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 
 
 # Models
@@ -65,7 +68,12 @@ class AgentTask(db.Model):
     task_type = db.Column(db.String(50), nullable=False)  # e.g., "weather", "places", "lodging", "transit"
     status = db.Column(db.String(50), nullable=False, default="pending")  # pending/running/completed/failed
 
-    # fields for debugging / worker
+    input_json = db.Column(db.Text, nullable=True)
+    attempts = db.Column(db.Integer, nullable=False, default=0)
+    max_attempts = db.Column(db.Integer, nullable=False, default=3)
+    worker_id = db.Column(db.String(200), nullable=True)
+
+    # fields for debugging / workers
     started_at = db.Column(db.DateTime, nullable=True)
     finished_at = db.Column(db.DateTime, nullable=True)
     error = db.Column(db.Text, nullable=True)
@@ -145,10 +153,31 @@ def request_trip():
         db.session.add(submission)
         db.session.commit()
 
-        # Seed starter tasks (Phase 4 will actually execute these -- this is for dummy seed data)
         starter_tasks = ["weather", "places", "lodging", "transit"]
         for t in starter_tasks:
-            db.session.add(AgentTask(submission_id=submission.id, task_type=t, status="pending"))
+            db.session.add(
+                AgentTask(
+                    submission_id=submission.id,
+                    task_type=t,
+                    status="pending",
+                    input_json=None,
+                    attempts=0,
+                    max_attempts=3,
+                )
+            )
+
+        # Add supervisor_update so the plan starts forming immediately
+        db.session.add(
+            AgentTask(
+                submission_id=submission.id,
+                task_type="supervisor_update",
+                status="pending",
+                input_json=json.dumps({"reason": "new_submission"}),
+                attempts=0,
+                max_attempts=3,
+            )
+        )
+
         db.session.commit()
 
         flash("Trip request submitted! View the dashboard for updates.", "success")
