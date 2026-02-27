@@ -1,4 +1,7 @@
 # Copyright Michael Mahoney February 2026
+
+# placeholder stub right now, implement transit API
+
 from __future__ import annotations
 
 from typing import Any
