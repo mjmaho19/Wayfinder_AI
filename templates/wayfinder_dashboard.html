@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wayfinder – Dashboard</title>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAUb3y_iv4wLZsd9eiFsmHqipmYbL9p5X4&callback=initMap" async defer>
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <style>
@@ -508,68 +510,9 @@
     <!-- MAP -->
     <div class="map-wrapper">
       <div id="map">
-        <!-- Stylized SVG placeholder map -->
-        <svg class="map-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" preserveAspectRatio="xMidYMid slice">
-          <!-- Background -->
-          <rect width="900" height="520" fill="#141820"/>
-          <!-- Grid lines subtle -->
-          <g stroke="#1c2030" stroke-width="1">
-            <line x1="0" y1="104" x2="900" y2="104"/>
-            <line x1="0" y1="208" x2="900" y2="208"/>
-            <line x1="0" y1="312" x2="900" y2="312"/>
-            <line x1="0" y1="416" x2="900" y2="416"/>
-            <line x1="180" y1="0" x2="180" y2="520"/>
-            <line x1="360" y1="0" x2="360" y2="520"/>
-            <line x1="540" y1="0" x2="540" y2="520"/>
-            <line x1="720" y1="0" x2="720" y2="520"/>
-          </g>
-          <!-- Roads major -->
-          <g stroke="#222840" stroke-width="14" stroke-linecap="round">
-            <line x1="0" y1="260" x2="900" y2="260"/>
-            <line x1="450" y1="0" x2="450" y2="520"/>
-            <line x1="0" y1="150" x2="900" y2="370"/>
-            <line x1="0" y1="400" x2="900" y2="120"/>
-          </g>
-          <!-- Roads minor -->
-          <g stroke="#1d2236" stroke-width="6" stroke-linecap="round">
-            <line x1="0" y1="180" x2="900" y2="180"/>
-            <line x1="0" y1="340" x2="900" y2="340"/>
-            <line x1="270" y1="0" x2="270" y2="520"/>
-            <line x1="630" y1="0" x2="630" y2="520"/>
-            <line x1="100" y1="0" x2="800" y2="520"/>
-            <line x1="800" y1="0" x2="100" y2="520"/>
-          </g>
-          <!-- Blocks / buildings -->
-          <g fill="#192030" rx="3">
-            <rect x="50" y="40" width="80" height="60" rx="4"/>
-            <rect x="160" y="60" width="60" height="40" rx="4"/>
-            <rect x="50" y="140" width="100" height="20" rx="4"/>
-            <rect x="300" y="40" width="100" height="80" rx="4"/>
-            <rect x="420" y="30" width="60" height="90" rx="4"/>
-            <rect x="520" y="50" width="80" height="60" rx="4"/>
-            <rect x="640" y="40" width="60" height="70" rx="4"/>
-            <rect x="730" y="30" width="120" height="80" rx="4"/>
-            <rect x="50" y="290" width="120" height="90" rx="4"/>
-            <rect x="200" y="300" width="80" height="60" rx="4"/>
-            <rect x="310" y="290" width="100" height="80" rx="4"/>
-            <rect x="490" y="300" width="80" height="70" rx="4"/>
-            <rect x="600" y="280" width="120" height="90" rx="4"/>
-            <rect x="750" y="290" width="100" height="80" rx="4"/>
-            <rect x="80" y="430" width="80" height="60" rx="4"/>
-            <rect x="200" y="420" width="120" height="70" rx="4"/>
-            <rect x="370" y="430" width="80" height="60" rx="4"/>
-            <rect x="500" y="420" width="100" height="70" rx="4"/>
-            <rect x="640" y="430" width="80" height="60" rx="4"/>
-            <rect x="760" y="420" width="100" height="70" rx="4"/>
-          </g>
-          <!-- Water body -->
-          <path d="M0 460 Q150 440 300 470 Q450 500 600 465 Q750 440 900 460 L900 520 L0 520 Z" fill="#111a2c" opacity=".9"/>
-          <!-- radius circle -->
-          <circle cx="450" cy="260" r="200" fill="none" stroke="rgba(91,141,255,0.12)" stroke-width="1.5" stroke-dasharray="6 4"/>
-          <!-- Center marker -->
-          <circle cx="450" cy="260" r="6" fill="var(--accent)" opacity="0.9"/>
-          <circle cx="450" cy="260" r="14" fill="none" stroke="rgba(91,141,255,0.35)" stroke-width="1.5"/>
-        </svg>
+        <!-- Google Maps -->
+        <div id="google-map" style="width:100%;height:100%;position:absolute;inset:0;">
+        </div>
 
         <!-- Dynamic pins injected by JS -->
         <div id="pins"></div>
@@ -978,15 +921,535 @@ async function pollLatest() {
 }
 
 // ---- Events ----
+let gmap = null;
+let userLocation = null;
+let activeMarkers = [];
+let userMarker = null;
+
+async function initMap() {
+  const { Map } = await google.maps.importLibrary("maps");
+
+  if (!navigator.geolocation) {
+    document.getElementById('google-map').innerHTML = '<div style="color:#e8e8ec;display:flex;align-items:center;justify-content:center;height:100%;font-size:13px;">Geolocation is not supported by your browser.</div>';
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      gmap = new Map(document.getElementById('google-map'), {
+        center: userLocation,
+        zoom: 14,
+        disableDefaultUI: true,
+        styles: [
+          { elementType: 'geometry', stylers: [{ color: '#141820' }] },
+          { elementType: 'labels.text.fill', stylers: [{ color: '#7c7c8a' }] },
+          { elementType: 'labels.text.stroke', stylers: [{ color: '#0f0f11' }] },
+          { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#222840' }] },
+          { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#111a2c' }] },
+          { featureType: 'poi', stylers: [{ visibility: 'off' }] }
+        ]
+      });
+
+      // User location marker
+      userMarker = new google.maps.Marker({
+        position: userLocation,
+        map: gmap,
+        title: 'You are here',
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: '#5b8dff',
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 2
+        },
+        zIndex: 999
+      });
+    },
+    () => {
+      document.getElementById('google-map').innerHTML = '<div style="color:#e8e8ec;display:flex;align-items:center;justify-content:center;height:100%;font-size:13px;">Location access denied. Please enable location permissions and refresh.</div>';
+    }
+  );
+}
+
+function calcDistanceMi(lat1, lng1, lat2, lng2) {
+  const R = 3958.8;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) ** 2 +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLng/2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+async function searchNearbyHotels() {
+  if (!gmap || !userLocation) return;
+
+  activeMarkers.forEach(m => m.setMap(null));
+  activeMarkers = [];
+
+  const { PlacesService, PlacesServiceStatus } = await google.maps.importLibrary("places");
+  const service = new PlacesService(gmap);
+
+  const list = document.getElementById('results-list');
+  const label = document.getElementById('results-label');
+  const count = document.getElementById('results-count');
+  const colH = document.getElementById('col-headers');
+
+  list.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-text">Searching nearby hotels…</div></div>';
+  label.textContent = 'Nearby Hotels';
+  count.textContent = '…';
+  colH.style.display = 'none';
+
+  service.nearbySearch({
+    location: userLocation,
+    radius: 8047,
+    type: 'lodging'
+  }, (results, status) => {
+    if (status !== PlacesServiceStatus.OK) {
+      list.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Could not load hotels. Try again.</div></div>';
+      count.textContent = '0';
+      return;
+    }
+
+    const top10 = results.slice(0, 10);
+    count.textContent = `${top10.length} found`;
+    list.innerHTML = '';
+
+    top10.forEach((place) => {
+      const lat = place.geometry.location.lat();
+      const lng = place.geometry.location.lng();
+      const dist = calcDistanceMi(userLocation.lat, userLocation.lng, lat, lng).toFixed(1);
+
+      const marker = new google.maps.Marker({
+        position: place.geometry.location,
+        map: gmap,
+        title: place.name,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 8,
+          fillColor: '#a78bfa',
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 1.5
+        }
+      });
+      activeMarkers.push(marker);
+
+      const rating = place.rating ?? null;
+      const starsStr = rating ? '★'.repeat(Math.round(rating)) + '☆'.repeat(5 - Math.round(rating)) + ` ${rating}` : '';
+      const priceLevel = place.price_level ? '$'.repeat(place.price_level) + '/night' : 'Price N/A';
+
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <div class="card-icon" style="background:rgba(167,139,250,0.15);font-size:20px">🏨</div>
+        <div class="card-body">
+          <div class="card-name">${place.name}</div>
+          <div class="card-sub">Hotel</div>
+        </div>
+        <div class="card-right">
+          <span class="badge">${priceLevel}</span>
+          ${starsStr ? `<span class="stars">${starsStr}</span>` : ''}
+          <span class="dist">📍 ${dist} mi</span>
+        </div>
+      `;
+
+      card.addEventListener('click', () => {
+        activeMarkers.forEach(m => m.setIcon({
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 8,
+          fillColor: '#a78bfa',
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 1.5
+        }));
+        marker.setIcon({
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 12,
+          fillColor: '#fbbf24',
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 2
+        });
+        document.querySelectorAll('.card').forEach(c => c.style.borderColor = '');
+        card.style.borderColor = '#fbbf24';
+        gmap.panTo(place.geometry.location);
+      });
+
+      list.appendChild(card);
+    });
+  });
+}
+
+async function searchNearbyBathrooms() {
+  if (!gmap || !userLocation) return;
+
+  activeMarkers.forEach(m => m.setMap(null));
+  activeMarkers = [];
+
+  const { PlacesService, PlacesServiceStatus } = await google.maps.importLibrary("places");
+  const service = new PlacesService(gmap);
+
+  const list = document.getElementById('results-list');
+  const label = document.getElementById('results-label');
+  const count = document.getElementById('results-count');
+  const colH = document.getElementById('col-headers');
+
+  list.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-text">Searching nearby restrooms…</div></div>';
+  label.textContent = 'Nearby Restrooms';
+  count.textContent = '…';
+  colH.style.display = 'none';
+
+  service.nearbySearch({
+    location: userLocation,
+    radius: 8047,
+    keyword: 'public restroom',
+    type: 'point_of_interest'
+  }, (results, status) => {
+    if (status !== PlacesServiceStatus.OK) {
+      list.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Could not load restrooms. Try again.</div></div>';
+      count.textContent = '0';
+      return;
+    }
+
+    const top10 = results.slice(0, 10);
+    count.textContent = `${top10.length} found`;
+    list.innerHTML = '';
+
+    top10.forEach((place) => {
+      const lat = place.geometry.location.lat();
+      const lng = place.geometry.location.lng();
+      const dist = calcDistanceMi(userLocation.lat, userLocation.lng, lat, lng).toFixed(1);
+
+      const marker = new google.maps.Marker({
+        position: place.geometry.location,
+        map: gmap,
+        title: place.name,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 8,
+          fillColor: '#34d399',
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 1.5
+        }
+      });
+      activeMarkers.push(marker);
+
+      const rating = place.rating ?? null;
+      const starsStr = rating ? '★'.repeat(Math.round(rating)) + '☆'.repeat(5 - Math.round(rating)) + ` ${rating}` : '';
+      const address = place.vicinity ?? 'Address unavailable';
+      const hours = place.opening_hours?.isOpen?.() ? 'Open now' : place.opening_hours ? 'Closed' : null;
+      const accessible = place.wheelchair_accessible_entrance ?? false;
+
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <div class="card-icon" style="background:rgba(52,211,153,0.15);font-size:20px">🚻</div>
+        <div class="card-body">
+          <div class="card-name">${place.name}</div>
+          <div class="card-sub">${address}</div>
+        </div>
+        <div class="card-right">
+          ${accessible ? '<span class="badge" title="Wheelchair accessible">♿</span>' : ''}
+          ${hours ? `<span class="badge">${hours}</span>` : ''}
+          ${starsStr ? `<span class="stars">${starsStr}</span>` : ''}
+          <span class="dist">📍 ${dist} mi</span>
+        </div>
+      `;
+
+      card.addEventListener('click', () => {
+        activeMarkers.forEach(m => m.setIcon({
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 8,
+          fillColor: '#34d399',
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 1.5
+        }));
+        marker.setIcon({
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 12,
+          fillColor: '#fbbf24',
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 2
+        });
+        document.querySelectorAll('.card').forEach(c => c.style.borderColor = '');
+        card.style.borderColor = '#fbbf24';
+        gmap.panTo(place.geometry.location);
+      });
+
+      list.appendChild(card);
+    });
+  });
+}
+
+async function searchNearbyPOI() {
+  if (!gmap || !userLocation) return;
+
+  activeMarkers.forEach(m => m.setMap(null));
+  activeMarkers = [];
+
+  const { PlacesService, PlacesServiceStatus } = await google.maps.importLibrary("places");
+  const service = new PlacesService(gmap);
+
+  const list = document.getElementById('results-list');
+  const label = document.getElementById('results-label');
+  const count = document.getElementById('results-count');
+  const colH = document.getElementById('col-headers');
+
+  list.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-text">Searching nearby points of interest…</div></div>';
+  label.textContent = 'Explore Nearby';
+  count.textContent = '…';
+  colH.style.display = 'none';
+
+  // Run two searches in parallel — tourist attractions and museums
+  const searchPromise = (type) => new Promise((resolve) => {
+    service.nearbySearch({
+      location: userLocation,
+      radius: 8047,
+      type
+    }, (results, status) => {
+      resolve(status === PlacesServiceStatus.OK ? results : []);
+    });
+  });
+
+  const [attractions, museums] = await Promise.all([
+    searchPromise('tourist_attraction'),
+    searchPromise('museum')
+  ]);
+
+  // Merge and deduplicate by place_id
+  const seen = new Set();
+  const combined = [...attractions, ...museums].filter(place => {
+    if (seen.has(place.place_id)) return false;
+    seen.add(place.place_id);
+    return true;
+  });
+
+  // Sort by rating descending
+  combined.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+  const top10 = combined.slice(0, 10);
+
+  if (top10.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">No points of interest found nearby.</div></div>';
+    count.textContent = '0';
+    return;
+  }
+
+  count.textContent = `${top10.length} found`;
+  list.innerHTML = '';
+
+  // POI type → emoji
+  const poiIcon = (types) => {
+    if (types.includes('museum')) return '🏛️';
+    if (types.includes('park')) return '🌳';
+    if (types.includes('church') || types.includes('place_of_worship')) return '⛪';
+    if (types.includes('stadium')) return '🏟️';
+    if (types.includes('movie_theater')) return '🎬';
+    if (types.includes('amusement_park')) return '🎡';
+    if (types.includes('zoo')) return '🦁';
+    if (types.includes('art_gallery')) return '🎨';
+    return '📍';
+  };
+
+  top10.forEach((place) => {
+    const lat = place.geometry.location.lat();
+    const lng = place.geometry.location.lng();
+    const dist = calcDistanceMi(userLocation.lat, userLocation.lng, lat, lng).toFixed(1);
+
+    const marker = new google.maps.Marker({
+      position: place.geometry.location,
+      map: gmap,
+      title: place.name,
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 8,
+        fillColor: '#fbbf24',
+        fillOpacity: 1,
+        strokeColor: '#fff',
+        strokeWeight: 1.5
+      }
+    });
+    activeMarkers.push(marker);
+
+    const rating = place.rating ?? null;
+    const starsStr = rating ? '★'.repeat(Math.round(rating)) + '☆'.repeat(5 - Math.round(rating)) + ` ${rating}` : '';
+    const type = place.types?.[0]?.replace(/_/g, ' ') ?? 'Point of Interest';
+    const icon = poiIcon(place.types ?? []);
+    const hours = place.opening_hours?.isOpen?.() ? 'Open now' : place.opening_hours ? 'Closed' : null;
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="card-icon" style="background:rgba(251,191,36,0.15);font-size:20px">${icon}</div>
+      <div class="card-body">
+        <div class="card-name">${place.name}</div>
+        <div class="card-sub">${type}</div>
+      </div>
+      <div class="card-right">
+        ${hours ? `<span class="badge">${hours}</span>` : ''}
+        ${starsStr ? `<span class="stars">${starsStr}</span>` : ''}
+        <span class="dist">📍 ${dist} mi</span>
+      </div>
+    `;
+
+    card.addEventListener('click', () => {
+      activeMarkers.forEach(m => m.setIcon({
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 8,
+        fillColor: '#fbbf24',
+        fillOpacity: 1,
+        strokeColor: '#fff',
+        strokeWeight: 1.5
+      }));
+      marker.setIcon({
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 12,
+        fillColor: '#ff6b6b',
+        fillOpacity: 1,
+        strokeColor: '#fff',
+        strokeWeight: 2
+      });
+      document.querySelectorAll('.card').forEach(c => c.style.borderColor = '');
+      card.style.borderColor = '#fbbf24';
+      gmap.panTo(place.geometry.location);
+    });
+
+    list.appendChild(card);
+  });
+}
+
+async function searchNearbyRestaurants() {
+  if (!gmap || !userLocation) return;
+
+  // Clear old markers (but keep user marker)
+  activeMarkers.forEach(m => m.setMap(null));
+  activeMarkers = [];
+
+  const { PlacesService, PlacesServiceStatus } = await google.maps.importLibrary("places");
+  const service = new PlacesService(gmap);
+
+  const list = document.getElementById('results-list');
+  const label = document.getElementById('results-label');
+  const count = document.getElementById('results-count');
+  const colH = document.getElementById('col-headers');
+
+  list.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-text">Searching nearby restaurants…</div></div>';
+  label.textContent = 'Nearby Restaurants';
+  count.textContent = '…';
+  colH.style.display = 'none';
+
+  service.nearbySearch({
+    location: userLocation,
+    radius: 8047,
+    type: 'restaurant'
+  }, (results, status) => {
+    if (status !== PlacesServiceStatus.OK) {
+      list.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Could not load restaurants. Try again.</div></div>';
+      count.textContent = '0';
+      return;
+    }
+
+    const top10 = results.slice(0, 10);
+    count.textContent = `${top10.length} found`;
+    list.innerHTML = '';
+
+    top10.forEach((place, i) => {
+      const lat = place.geometry.location.lat();
+      const lng = place.geometry.location.lng();
+      const dist = calcDistanceMi(userLocation.lat, userLocation.lng, lat, lng).toFixed(1);
+
+      // Map marker
+      const marker = new google.maps.Marker({
+        position: place.geometry.location,
+        map: gmap,
+        title: place.name,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 8,
+          fillColor: '#ff6b6b',
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 1.5
+        }
+      });
+      activeMarkers.push(marker);
+
+      // Result card
+      const rating = place.rating ?? null;
+      const starsStr = rating ? '★'.repeat(Math.round(rating)) + '☆'.repeat(5 - Math.round(rating)) + ` ${rating}` : '';
+      const type = place.types?.[0]?.replace(/_/g, ' ') ?? 'Restaurant';
+      const priceLevel = place.price_level ? '$'.repeat(place.price_level) : '';
+
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <div class="card-icon" style="background:rgba(255,107,107,0.15);font-size:20px">🍽️</div>
+        <div class="card-body">
+          <div class="card-name">${place.name}</div>
+          <div class="card-sub">${type}</div>
+        </div>
+        <div class="card-right">
+          ${priceLevel ? `<span class="badge">${priceLevel}</span>` : ''}
+          ${starsStr ? `<span class="stars">${starsStr}</span>` : ''}
+          <span class="dist">📍 ${dist} mi</span>
+        </div>
+      `;
+
+      // Click card → highlight marker and pan to it
+      card.addEventListener('click', () => {
+        // Reset all markers to red
+        activeMarkers.forEach(m => m.setIcon({
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 8,
+          fillColor: '#ff6b6b',
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 1.5
+        }));
+
+        // Highlight clicked marker in yellow and make it bigger
+        marker.setIcon({
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 12,
+          fillColor: '#fbbf24',
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 2
+        });
+
+        // Remove highlight from all cards
+        document.querySelectorAll('.card').forEach(c => c.style.borderColor = '');
+        card.style.borderColor = '#fbbf24';
+
+        // Pan map to the marker
+        gmap.panTo(place.geometry.location);
+      });
+
+      list.appendChild(card);
+    });
+  });
+}
+
 document.querySelectorAll('.filter-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     if (btn.disabled) return;
 
-    if (currentType === btn.dataset.type) {
-      currentType = null;
-      btn.classList.remove('active');
-      document.getElementById('pins').innerHTML = '';
-      setSelectPromptState();
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    if (btn.dataset.type === 'restaurant') {
+      searchNearbyRestaurants();
+    } else if (btn.dataset.type === 'hotel') {
+      searchNearbyHotels();
+    } else if (btn.dataset.type === 'bathroom') {
+      searchNearbyBathrooms();
+    } else if (btn.dataset.type === 'poi') {
+      searchNearbyPOI();
     } else {
       selectType(btn.dataset.type);
     }
