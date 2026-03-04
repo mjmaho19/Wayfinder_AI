@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wayfinder – Dashboard</title>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAUb3y_iv4wLZsd9eiFsmHqipmYbL9p5X4&callback=initMap&loading=async" defer>
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <style>
@@ -150,13 +152,6 @@
       overflow: hidden;
     }
 
-    /* SVG placeholder map */
-    .map-svg {
-      width: 100%;
-      height: 100%;
-      position: absolute;
-      inset: 0;
-    }
 
     .map-overlay-tl {
       position: absolute;
@@ -495,9 +490,100 @@
       <span class="status-dot"></span>
       Within 10 mi · San Francisco, CA
     </div>
-    <div class="avatar">JD</div>
+  <div class="avatar" id="chat-trigger" onclick="toggleChat()" title="Travel Assistant" style="cursor:pointer;">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>
   </div>
 </header>
+
+<div id="chat-panel" style="
+  position:fixed;bottom:24px;right:24px;
+  width:360px;height:500px;
+  background:#17171a;border:1px solid rgba(255,255,255,0.07);
+  border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.6);
+  display:none;flex-direction:column;z-index:100;overflow:hidden;">
+
+  <div style="padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:space-between;">
+    <span style="font-weight:600;font-size:14px;color:#e8e8ec;">Travel Assistant</span>
+    <span onclick="toggleChat()" style="cursor:pointer;color:#7c7c8a;font-size:18px;line-height:1;">&times;</span>
+  </div>
+
+  <div id="chat-messages" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;"></div>
+
+  <div style="padding:12px;border-top:1px solid rgba(255,255,255,0.07);display:flex;gap:8px;">
+    <input id="chat-input" type="text" placeholder="Ask about your trip…" onkeydown="if(event.key==='Enter')sendChat()" style="
+      flex:1;background:#1e1e23;border:1px solid rgba(255,255,255,0.07);
+      border-radius:8px;padding:8px 12px;color:#e8e8ec;font-size:13px;
+      font-family:inherit;outline:none;">
+    <button onclick="sendChat()" style="
+      background:#5b8dff;border:none;border-radius:8px;
+      padding:8px 14px;color:#fff;font-size:13px;
+      cursor:pointer;font-family:inherit;">Send</button>
+  </div>
+</div>
+
+<!-- ─── CHATBOT ────────────────────────────────── -->
+<script>
+let chatOpen = false;
+let chatHistory = [];
+
+function toggleChat() {
+  chatOpen = !chatOpen;
+  const panel = document.getElementById('chat-panel');
+  panel.style.display = chatOpen ? 'flex' : 'none';
+}
+
+function appendMessage(role, text) {
+  const el = document.createElement('div');
+  el.style.cssText = `
+    padding:10px 13px;border-radius:10px;font-size:13px;line-height:1.5;max-width:88%;
+    ${role === 'user'
+      ? 'background:#5b8dff;color:#fff;align-self:flex-end;'
+      : 'background:#1e1e23;color:#e8e8ec;align-self:flex-start;border:1px solid rgba(255,255,255,0.07);'}
+  `;
+  el.textContent = text;
+  document.getElementById('chat-messages').appendChild(el);
+  document.getElementById('chat-messages').scrollTop = 999999;
+}
+
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+
+  appendMessage('user', text);
+  chatHistory.push({ role: 'user', content: text });
+
+  // Get current plan context
+  let planContext = '';
+  try {
+    const res = await fetch('/api/latest');
+    const data = await res.json();
+    if (data?.latest?.plan?.plan_json) {
+      planContext = data.latest.plan.plan_json;
+    }
+  } catch(e) {}
+
+  appendMessage('assistant', '…');
+  const msgs = document.getElementById('chat-messages');
+  const thinking = msgs.lastChild;
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: chatHistory, plan_context: planContext })
+    });
+    const data = await res.json();
+    thinking.textContent = data.reply;
+    chatHistory.push({ role: 'assistant', content: data.reply });
+  } catch(e) {
+    thinking.textContent = 'Something went wrong. Try again.';
+  }
+}
+</script>
 
 <!-- ─── APP BODY ────────────────────────────────── -->
 <div class="app">
@@ -508,71 +594,10 @@
     <!-- MAP -->
     <div class="map-wrapper">
       <div id="map">
-        <!-- Stylized SVG placeholder map -->
-        <svg class="map-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" preserveAspectRatio="xMidYMid slice">
-          <!-- Background -->
-          <rect width="900" height="520" fill="#141820"/>
-          <!-- Grid lines subtle -->
-          <g stroke="#1c2030" stroke-width="1">
-            <line x1="0" y1="104" x2="900" y2="104"/>
-            <line x1="0" y1="208" x2="900" y2="208"/>
-            <line x1="0" y1="312" x2="900" y2="312"/>
-            <line x1="0" y1="416" x2="900" y2="416"/>
-            <line x1="180" y1="0" x2="180" y2="520"/>
-            <line x1="360" y1="0" x2="360" y2="520"/>
-            <line x1="540" y1="0" x2="540" y2="520"/>
-            <line x1="720" y1="0" x2="720" y2="520"/>
-          </g>
-          <!-- Roads major -->
-          <g stroke="#222840" stroke-width="14" stroke-linecap="round">
-            <line x1="0" y1="260" x2="900" y2="260"/>
-            <line x1="450" y1="0" x2="450" y2="520"/>
-            <line x1="0" y1="150" x2="900" y2="370"/>
-            <line x1="0" y1="400" x2="900" y2="120"/>
-          </g>
-          <!-- Roads minor -->
-          <g stroke="#1d2236" stroke-width="6" stroke-linecap="round">
-            <line x1="0" y1="180" x2="900" y2="180"/>
-            <line x1="0" y1="340" x2="900" y2="340"/>
-            <line x1="270" y1="0" x2="270" y2="520"/>
-            <line x1="630" y1="0" x2="630" y2="520"/>
-            <line x1="100" y1="0" x2="800" y2="520"/>
-            <line x1="800" y1="0" x2="100" y2="520"/>
-          </g>
-          <!-- Blocks / buildings -->
-          <g fill="#192030" rx="3">
-            <rect x="50" y="40" width="80" height="60" rx="4"/>
-            <rect x="160" y="60" width="60" height="40" rx="4"/>
-            <rect x="50" y="140" width="100" height="20" rx="4"/>
-            <rect x="300" y="40" width="100" height="80" rx="4"/>
-            <rect x="420" y="30" width="60" height="90" rx="4"/>
-            <rect x="520" y="50" width="80" height="60" rx="4"/>
-            <rect x="640" y="40" width="60" height="70" rx="4"/>
-            <rect x="730" y="30" width="120" height="80" rx="4"/>
-            <rect x="50" y="290" width="120" height="90" rx="4"/>
-            <rect x="200" y="300" width="80" height="60" rx="4"/>
-            <rect x="310" y="290" width="100" height="80" rx="4"/>
-            <rect x="490" y="300" width="80" height="70" rx="4"/>
-            <rect x="600" y="280" width="120" height="90" rx="4"/>
-            <rect x="750" y="290" width="100" height="80" rx="4"/>
-            <rect x="80" y="430" width="80" height="60" rx="4"/>
-            <rect x="200" y="420" width="120" height="70" rx="4"/>
-            <rect x="370" y="430" width="80" height="60" rx="4"/>
-            <rect x="500" y="420" width="100" height="70" rx="4"/>
-            <rect x="640" y="430" width="80" height="60" rx="4"/>
-            <rect x="760" y="420" width="100" height="70" rx="4"/>
-          </g>
-          <!-- Water body -->
-          <path d="M0 460 Q150 440 300 470 Q450 500 600 465 Q750 440 900 460 L900 520 L0 520 Z" fill="#111a2c" opacity=".9"/>
-          <!-- radius circle -->
-          <circle cx="450" cy="260" r="200" fill="none" stroke="rgba(91,141,255,0.12)" stroke-width="1.5" stroke-dasharray="6 4"/>
-          <!-- Center marker -->
-          <circle cx="450" cy="260" r="6" fill="var(--accent)" opacity="0.9"/>
-          <circle cx="450" cy="260" r="14" fill="none" stroke="rgba(91,141,255,0.35)" stroke-width="1.5"/>
-        </svg>
-
-        <!-- Dynamic pins injected by JS -->
-        <div id="pins"></div>
+       <div id="pins"></div>
+        <!-- Real Google Map (powered by Google Maps API) -->
+        <div id="google-map" style="width:100%;height:100%;position:absolute;inset:0;"></div>
+        <div id="map-loading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#141820;color:#7c7c8a;font-size:13px;z-index:10;pointer-events:none;">Loading map…</div>
 
         <!-- Map search -->
         <div class="map-overlay-tl">
@@ -586,13 +611,13 @@
 
         <!-- Map controls -->
         <div class="map-controls">
-          <div class="map-btn" title="Zoom in">
+          <div class="map-btn" title="Zoom in" onclick="wayfinder_mapZoom(1)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           </div>
-          <div class="map-btn" title="Zoom out">
+          <div class="map-btn" title="Zoom out" onclick="wayfinder_mapZoom(-1)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/></svg>
           </div>
-          <div class="map-btn" title="My location">
+          <div class="map-btn" title="Re-center" onclick="wayfinder_recenter()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
           </div>
         </div>
@@ -840,33 +865,120 @@ function renderCard(item, type) {
   return card;
 }
 
-function renderPins(type) {
-  const pinsEl = document.getElementById('pins');
-  pinsEl.innerHTML = '';
-  const mapEl = document.getElementById('map');
-  const mw = mapEl.offsetWidth, mh = mapEl.offsetHeight;
 
-  (data[type] || []).forEach((item, i) => {
-    // If x/y missing, scatter lightly so pins still show
-    const x = (typeof item.x === 'number') ? item.x : (20 + Math.random() * 60);
-    const y = (typeof item.y === 'number') ? item.y : (25 + Math.random() * 50);
+// ── Google Maps integration ──────────────────────────────────────────────────
+let gmap = null;
+let userLocation = null;
+let mapCenter = null;
+let activeMapMarkers = [];
 
-    const pin = document.createElement('div');
-    pin.className = `pin type-${type}`;
-    pin.style.left = (x / 100 * mw) + 'px';
-    pin.style.top  = (y / 100 * mh) + 'px';
-    pin.innerHTML = `
-      <div class="pin-bubble">${item.name ?? 'Location'}</div>
-      <div class="pin-icon">${item.icon ?? '📍'}</div>
-      <div class="pin-stem"></div>
-    `;
-    pinsEl.appendChild(pin);
-    setTimeout(() => pin.classList.add('visible'), i * 60);
-    pin.addEventListener('click', () => {
-      document.querySelectorAll('.pin').forEach(p => p.classList.remove('active'));
-      pin.classList.toggle('active');
-    });
+const DARK_STYLES = [
+  { elementType: 'geometry',           stylers: [{ color: '#141820' }] },
+  { elementType: 'labels.text.fill',   stylers: [{ color: '#7c7c8a' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#0f0f11' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#222840' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#111a2c' }] },
+  { featureType: 'poi', stylers: [{ visibility: 'off' }] }
+];
+
+const MAP_MARKER_COLORS = {
+  restaurant: '#f97316',
+  hotel:      '#a78bfa',
+  shop:       '#34d399',
+  poi:        '#60a5fa',
+  bathroom:   '#94a3b8',
+};
+
+async function initMap() {
+  const { Map } = await google.maps.importLibrary("maps");
+  const loadingEl = document.getElementById('map-loading');
+
+  gmap = new Map(document.getElementById('google-map'), {
+    center: { lat: 20.0, lng: 0.0 },
+    zoom: 2,
+    disableDefaultUI: true,
+    styles: DARK_STYLES
   });
+
+  if (loadingEl) loadingEl.style.display = 'none';
+
+  // Try geolocation (optional bonus — not required)
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition((pos) => {
+      userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      if (!mapCenter) {
+        gmap.setCenter(userLocation);
+        gmap.setZoom(13);
+      }
+      new google.maps.Marker({
+        position: userLocation,
+        map: gmap,
+        title: 'You are here',
+        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#5b8dff', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 },
+        zIndex: 999
+      });
+    }, () => {
+      // Geolocation denied — map still works via destination data
+    });
+  }
+}
+
+function wayfinder_mapZoom(delta) {
+  if (gmap) gmap.setZoom(gmap.getZoom() + delta);
+}
+
+function wayfinder_recenter() {
+  if (!gmap) return;
+  if (mapCenter) { gmap.setCenter(mapCenter); gmap.setZoom(14); }
+  else if (userLocation) { gmap.setCenter(userLocation); gmap.setZoom(13); }
+}
+
+function renderPins(type) {
+  // Clear old markers
+  activeMapMarkers.forEach(m => m.setMap(null));
+  activeMapMarkers = [];
+
+  if (!gmap) return;
+
+  const items = data[type] || [];
+  const color = MAP_MARKER_COLORS[type] || '#ffffff';
+
+  items.forEach(item => {
+    if (!item.lat || !item.lng) return;
+
+    const marker = new google.maps.Marker({
+      position: { lat: item.lat, lng: item.lng },
+      map: gmap,
+      title: item.name,
+      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: color, fillOpacity: 1, strokeColor: '#fff', strokeWeight: 1.5 }
+    });
+
+    const infoWindow = new google.maps.InfoWindow({
+      content: `<div style="background:#1a1d2e;color:#e8e8ec;padding:8px 12px;border-radius:8px;font-family:sans-serif;font-size:13px;min-width:140px;">
+        <strong>${item.name}</strong><br/>
+        <span style="color:#7c7c8a;">${item.type || type}</span>
+        ${item.rating ? `<br/><span style="color:#fbbf24;">&#9733; ${item.rating}</span>` : ''}
+        ${item.distance_mi ? `<br/><span style="color:#7c7c8a;">&#128205; ${item.distance_mi} mi</span>` : ''}
+      </div>`
+    });
+
+    marker.addListener('click', () => infoWindow.open(gmap, marker));
+    activeMapMarkers.push(marker);
+  });
+
+  // Center map on destination if we have it
+  if (mapCenter) { gmap.setCenter(mapCenter); gmap.setZoom(14); }
+}
+
+// Called by applyLatestPayload to update map center when places data arrives
+function updateMapCenter(placesPayload) {
+  if (placesPayload?.center?.lat && placesPayload?.center?.lng && gmap) {
+    mapCenter = { lat: placesPayload.center.lat, lng: placesPayload.center.lng };
+    if (!currentType) {
+      gmap.setCenter(mapCenter);
+      gmap.setZoom(14);
+    }
+  }
 }
 
 function selectType(type) {
@@ -923,6 +1035,9 @@ function applyLatestPayload(latest) {
 
   const placesPayload = parsePlacesResultJson(placesRow.result_json);
   const items = Array.isArray(placesPayload?.items) ? placesPayload.items : [];
+
+  // Update real map center from places tool data
+  updateMapCenter(placesPayload);
 
   // Group items by item.type
   for (const item of items) {

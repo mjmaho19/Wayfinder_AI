@@ -1,4 +1,4 @@
-# Copyright Michael Mahoney February 2026
+# Copyright Michael Mahoney, Edgar Falfan February 2026
 
 from __future__ import annotations
 
@@ -190,6 +190,15 @@ def request_trip():
 def dashboard():
     """Render the Wayfinder dashboard."""
     return render_template("wayfinder_dashboard.html")
+
+@app.route("/api/chat", methods=["POST"])
+def chat():
+    from agents.chat_agent import chat_with_plan
+    data = request.get_json()
+    messages = data.get("messages", [])
+    plan_context = data.get("plan_context", "")
+    reply = chat_with_plan(messages, plan_context)
+    return jsonify({"reply": reply})
 
 
 # helps with the dashboard JS later
