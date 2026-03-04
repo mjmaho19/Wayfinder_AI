@@ -134,10 +134,13 @@ def run_supervisor(
 ) -> dict:
     slim_results = _slim_tool_results(tool_results)
 
+    edit_request = submission.get("edit_request") if isinstance(submission, dict) else None
+
     user_message = json.dumps({
         "submission": submission,
         "tool_results": slim_results,
-        "current_plan": None,  # omit old plan to save tokens
+        "current_plan": current_plan,  # must save so edit requests work
+        "edit_request": edit_request,
     }, indent=2)
 
     logger.info(

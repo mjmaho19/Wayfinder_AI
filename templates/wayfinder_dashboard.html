@@ -4,10 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wayfinder – Dashboard</title>
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAUb3y_iv4wLZsd9eiFsmHqipmYbL9p5X4&callback=initMap&loading=async" defer>
-  </script>
+
+  <!-- NOTE: API key exposed; keep as-is per your note, but fix later -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAUb3y_iv4wLZsd9eiFsmHqipmYbL9p5X4&callback=initMap&loading=async" defer></script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -152,7 +155,6 @@
       overflow: hidden;
     }
 
-
     .map-overlay-tl {
       position: absolute;
       top: 14px;
@@ -208,7 +210,7 @@
     }
     .map-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.18); }
 
-    /* Pin markers */
+    /* Pin markers (legacy container kept; you use Google Markers now) */
     .pin {
       position: absolute;
       transform: translate(-50%, -100%);
@@ -221,44 +223,6 @@
       z-index: 4;
     }
     .pin.visible { opacity: 1; }
-    .pin-bubble {
-      background: var(--surface2);
-      border: 1.5px solid var(--border);
-      border-radius: 8px;
-      padding: 3px 8px;
-      font-size: 11px;
-      font-weight: 500;
-      white-space: nowrap;
-      color: var(--text);
-      box-shadow: var(--shadow);
-      display: none;
-    }
-    .pin.active .pin-bubble { display: block; }
-    .pin-icon {
-      width: 32px; height: 32px;
-      border-radius: 50%;
-      display: grid;
-      place-items: center;
-      font-size: 15px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-      border: 2px solid rgba(255,255,255,0.15);
-      transition: transform .2s;
-    }
-    .pin:hover .pin-icon { transform: scale(1.15); }
-    .pin-stem {
-      width: 2px; height: 8px;
-      background: currentColor;
-      opacity: 0.5;
-    }
-
-    .pin.type-restaurant .pin-icon { background: #ff6b6b; color: #fff; }
-    .pin.type-restaurant { color: #ff6b6b; }
-    .pin.type-shop .pin-icon { background: var(--accent); color: #fff; }
-    .pin.type-shop { color: var(--accent); }
-    .pin.type-hotel .pin-icon { background: var(--accent2); color: #fff; }
-    .pin.type-hotel { color: var(--accent2); }
-    .pin.type-bathroom .pin-icon { background: var(--green); color: #fff; }
-    .pin.type-bathroom { color: var(--green); }
 
     /* ─── SIDEBAR BUTTONS ────────────────────── */
     .sidebar {
@@ -490,13 +454,15 @@
       <span class="status-dot"></span>
       Within 10 mi · San Francisco, CA
     </div>
-  <div class="avatar" id="chat-trigger" onclick="toggleChat()" title="Travel Assistant" style="cursor:pointer;">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
-    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-    </svg>
+    <div class="avatar" id="chat-trigger" onclick="toggleChat()" title="Travel Assistant" style="cursor:pointer;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+    </div>
   </div>
 </header>
 
+<!-- CHAT PANEL -->
 <div id="chat-panel" style="
   position:fixed;bottom:24px;right:24px;
   width:360px;height:500px;
@@ -528,6 +494,16 @@
 let chatOpen = false;
 let chatHistory = [];
 
+/**
+ * Option C support:
+ * - Keep an active submission id for the chat session
+ * - When a major edit is detected, ask the user to type "confirm"
+ * - On confirm, POST /api/chat with apply_changes + edit object
+ * - If backend returns new_submission_id, switch the active submission id
+ */
+let activeSubmissionId = null;
+let pendingEdit = null; // { desired_destination: "Los Angeles", ... }
+
 function toggleChat() {
   chatOpen = !chatOpen;
   const panel = document.getElementById('chat-panel');
@@ -547,6 +523,52 @@ function appendMessage(role, text) {
   document.getElementById('chat-messages').scrollTop = 999999;
 }
 
+function isConfirmMessage(text) {
+  const t = (text || "").trim().toLowerCase();
+  return t === "confirm" || t === "yes" || t === "apply" || t === "confirm apply";
+}
+
+/**
+ * Very simple heuristic: detects destination change intent.
+ * Examples it catches:
+ * - "change my trip to Los Angeles"
+ * - "change destination to LA"
+ * - "can I change my trip to Los Angeles?"
+ */
+function extractMajorEdit(text) {
+  const t = (text || "").trim();
+
+  const patterns = [
+    /change (my )?(trip|destination)( to)? (.+)$/i,
+    /can i change (my )?(trip|destination)( to)? (.+)$/i,
+    /let'?s go to (.+)$/i,
+    /make it (.+)$/i
+  ];
+
+  for (const re of patterns) {
+    const m = t.match(re);
+    if (m) {
+      const dest = (m[m.length - 1] || "").trim();
+      if (dest.length >= 2) return { desired_destination: dest };
+    }
+  }
+
+  return null;
+}
+
+async function getLatestContext() {
+  const res = await fetch('/api/latest', { cache: 'no-store' });
+  const json = await res.json();
+  const latest = json?.latest || null;
+
+  return {
+    ok: Boolean(json?.ok && latest),
+    latest,
+    latestId: latest?.id ?? null,
+    planContext: latest?.plan?.plan_json ?? ''
+  };
+}
+
 async function sendChat() {
   const input = document.getElementById('chat-input');
   const text = input.value.trim();
@@ -556,30 +578,118 @@ async function sendChat() {
   appendMessage('user', text);
   chatHistory.push({ role: 'user', content: text });
 
-  // Get current plan context
-  let planContext = '';
-  try {
-    const res = await fetch('/api/latest');
-    const data = await res.json();
-    if (data?.latest?.plan?.plan_json) {
-      planContext = data.latest.plan.plan_json;
-    }
-  } catch(e) {}
-
+  // Show thinking bubble immediately
   appendMessage('assistant', '…');
   const msgs = document.getElementById('chat-messages');
   const thinking = msgs.lastChild;
 
+  // Ensure we have an active submission id for this chat session
+  // (only set it once; do NOT reset it each message)
+  let planContext = '';
   try {
-    const res = await fetch('/api/chat', {
+    const ctx = await getLatestContext();
+
+    if (!ctx.ok) {
+      thinking.textContent = "No trip found yet. Submit a trip request first.";
+      return;
+    }
+
+    // If chat hasn't been "bound" yet, bind it to latest
+    if (!activeSubmissionId) {
+      activeSubmissionId = ctx.latestId;
+    }
+
+    // Plan context should match the active submission.
+    // We only have /api/latest, so:
+    // - if activeSubmissionId === latestId: use latest plan_json
+    // - else: send empty plan_context (backend can still handle chat)
+    if (activeSubmissionId === ctx.latestId) {
+      planContext = ctx.planContext || '';
+    } else {
+      planContext = '';
+    }
+
+  } catch (e) {
+    console.warn("Failed to load /api/latest:", e);
+    thinking.textContent = "Couldn't load your trip context. Try refreshing the page.";
+    return;
+  }
+
+  // --- Option C confirmation flow ---
+  const maybeEdit = extractMajorEdit(text);
+
+  // If user typed an edit request, store it and ask to confirm
+  if (maybeEdit && !isConfirmMessage(text)) {
+    pendingEdit = {
+      ...(pendingEdit || {}),
+      ...maybeEdit
+    };
+
+    const dest = pendingEdit.desired_destination || "that destination";
+    const confirmMsg =
+      `Got it — you want to change your trip to ${dest}.\n\n` +
+      `Type "confirm" to apply this change (this will create a new trip submission and refresh the dashboard).`;
+
+    thinking.textContent = confirmMsg;
+    chatHistory.push({ role: 'assistant', content: confirmMsg });
+    return;
+  }
+
+  // If user confirms and we have a pending edit, apply it via backend
+  const applying = isConfirmMessage(text) && pendingEdit;
+
+  const payload = {
+    submission_id: activeSubmissionId,
+    messages: chatHistory,
+    plan_context: planContext,
+    ...(applying ? { apply_changes: true, edit: pendingEdit } : {})
+  };
+
+  console.log("POST /api/chat payload:", payload);
+
+  try {
+    const chatRes = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: chatHistory, plan_context: planContext })
+      body: JSON.stringify(payload)
     });
-    const data = await res.json();
-    thinking.textContent = data.reply;
-    chatHistory.push({ role: 'assistant', content: data.reply });
-  } catch(e) {
+
+    const raw = await chatRes.text();
+    console.log("chat status:", chatRes.status, chatRes.headers.get("content-type"));
+    console.log("chat raw response:", raw);
+
+    if (!chatRes.ok) {
+      thinking.textContent = `Chat failed (HTTP ${chatRes.status}).`;
+      return;
+    }
+
+    let chatJson;
+    try {
+      chatJson = JSON.parse(raw);
+    } catch (e) {
+      thinking.textContent = "Chat returned invalid JSON.";
+      return;
+    }
+
+    const reply = chatJson?.reply ?? "No reply.";
+    thinking.textContent = reply;
+    chatHistory.push({ role: 'assistant', content: reply });
+
+    // If backend created a new submission, switch the active one
+    if (chatJson?.new_submission_id) {
+      activeSubmissionId = chatJson.new_submission_id;
+      pendingEdit = null;
+
+      // optional: clear currentType selection so the new destination starts clean
+      currentType = null;
+      document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+
+      // pull fresh /api/latest immediately (your interval will also catch it)
+      try { pollLatest(); } catch (e) {}
+    }
+
+  } catch (e) {
+    console.warn("Chat request failed:", e);
     thinking.textContent = 'Something went wrong. Try again.';
   }
 }
@@ -594,12 +704,13 @@ async function sendChat() {
     <!-- MAP -->
     <div class="map-wrapper">
       <div id="map">
-       <div id="pins"></div>
+        <div id="pins"></div>
+
         <!-- Real Google Map (powered by Google Maps API) -->
         <div id="google-map" style="width:100%;height:100%;position:absolute;inset:0;"></div>
         <div id="map-loading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#141820;color:#7c7c8a;font-size:13px;z-index:10;pointer-events:none;">Loading map…</div>
 
-        <!-- Map search -->
+        <!-- Map search (UI only) -->
         <div class="map-overlay-tl">
           <div class="map-search">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" color="#7c7c8a">
@@ -612,13 +723,19 @@ async function sendChat() {
         <!-- Map controls -->
         <div class="map-controls">
           <div class="map-btn" title="Zoom in" onclick="wayfinder_mapZoom(1)">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
           </div>
           <div class="map-btn" title="Zoom out" onclick="wayfinder_mapZoom(-1)">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
           </div>
           <div class="map-btn" title="Re-center" onclick="wayfinder_recenter()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+            </svg>
           </div>
         </div>
       </div>
@@ -657,7 +774,9 @@ async function sendChat() {
         <span class="results-count" id="results-count">—</span>
       </div>
       <div class="results-meta">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
         Within 10 miles · Sorted by distance
       </div>
     </div>
@@ -680,7 +799,7 @@ async function sendChat() {
 
 <script>
 /**
- * Wayfinder dashboard (Choice #1):
+ * Wayfinder dashboard:
  * - Polls /api/latest
  * - Reads ToolResult where tool_name === "places"
  * - Parses result_json
@@ -772,7 +891,6 @@ function starsHTML(rating) {
 }
 
 function _fmtDistance(item) {
-  // supports either dist (legacy) or distance_mi (Choice #1)
   if (item.dist) return item.dist;
   const dm = item.distance_mi;
   if (typeof dm === 'number') return `${dm} mi`;
@@ -781,37 +899,22 @@ function _fmtDistance(item) {
 }
 
 function _normalizeForUI(item, type) {
-  // normalize fields so the existing card renderer can stay mostly the same
   const out = { ...item };
-
-  // name
   out.name = out.name ?? 'Unknown';
 
-  // sub / type label
-  // restaurants: show cuisine/type if present, else use item.type
   if (type === 'restaurant') {
     out.sub = out.sub ?? out.cuisine ?? out.primary_type ?? 'Restaurant';
   }
-
-  // bathrooms: the template expects item.sub
   if (type === 'bathroom') {
     out.sub = out.sub ?? out.note ?? 'Public';
   }
-
-  // hotels: price formatting
   if (type === 'hotel') {
-    if (out.price && typeof out.price === 'number') {
-      out.price = `$${out.price}/night`;
-    }
-    if (out.price_per_night && typeof out.price_per_night === 'number') {
-      out.price = `$${out.price_per_night}/night`;
-    }
+    if (out.price && typeof out.price === 'number') out.price = `$${out.price}/night`;
+    if (out.price_per_night && typeof out.price_per_night === 'number') out.price = `$${out.price_per_night}/night`;
   }
 
-  // distance
   out.dist = _fmtDistance(out);
 
-  // icon defaults if tool doesn’t provide
   const iconDefaults = {
     restaurant: '🍽️',
     shop: '🛍️',
@@ -820,7 +923,6 @@ function _normalizeForUI(item, type) {
     poi: '📍'
   };
   out.icon = out.icon ?? iconDefaults[type] ?? '📍';
-
   return out;
 }
 
@@ -902,7 +1004,6 @@ async function initMap() {
 
   if (loadingEl) loadingEl.style.display = 'none';
 
-  // Try geolocation (optional bonus — not required)
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition((pos) => {
       userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
@@ -917,9 +1018,7 @@ async function initMap() {
         icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#5b8dff', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 },
         zIndex: 999
       });
-    }, () => {
-      // Geolocation denied — map still works via destination data
-    });
+    }, () => {});
   }
 }
 
@@ -934,7 +1033,6 @@ function wayfinder_recenter() {
 }
 
 function renderPins(type) {
-  // Clear old markers
   activeMapMarkers.forEach(m => m.setMap(null));
   activeMapMarkers = [];
 
@@ -966,11 +1064,9 @@ function renderPins(type) {
     activeMapMarkers.push(marker);
   });
 
-  // Center map on destination if we have it
   if (mapCenter) { gmap.setCenter(mapCenter); gmap.setZoom(14); }
 }
 
-// Called by applyLatestPayload to update map center when places data arrives
 function updateMapCenter(placesPayload) {
   if (placesPayload?.center?.lat && placesPayload?.center?.lng && gmap) {
     mapCenter = { lat: placesPayload.center.lat, lng: placesPayload.center.lng };
@@ -992,7 +1088,6 @@ function selectType(type) {
   label.textContent = labels[type] || 'Nearby Locations';
   count.textContent = `${items.length} found`;
 
-  // Column header right side
   const chRight = document.getElementById('ch-right');
   chRight.innerHTML = (colHeaders[type]?.right || []).map(h => `<span>${h}</span>`).join('');
   colH.style.display = 'flex';
@@ -1002,32 +1097,23 @@ function selectType(type) {
 
   renderPins(type);
 
-  // Button states
   document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.type === type);
   });
 }
 
-// ---- Choice #1 parsing ----
 function parsePlacesResultJson(resultJson) {
-  try {
-    return JSON.parse(resultJson);
-  } catch (e) {
-    return null;
-  }
+  try { return JSON.parse(resultJson); } catch (e) { return null; }
 }
 
 function applyLatestPayload(latest) {
-  // Reset data
   data = { restaurant: [], shop: [], hotel: [], bathroom: [], poi: [] };
   const enabledTypes = new Set();
 
-  // Find ToolResult row where tool_name === "places"
   const toolResults = latest?.tool_results || [];
   const placesRow = toolResults.find(tr => tr.tool_name === 'places');
 
   if (!placesRow) {
-    // no places yet
     setButtonsEnabled(new Set());
     setSelectPromptState();
     return;
@@ -1036,26 +1122,21 @@ function applyLatestPayload(latest) {
   const placesPayload = parsePlacesResultJson(placesRow.result_json);
   const items = Array.isArray(placesPayload?.items) ? placesPayload.items : [];
 
-  // Update real map center from places tool data
   updateMapCenter(placesPayload);
 
-  // Group items by item.type
   for (const item of items) {
     const t = (item?.type || '').toLowerCase();
-    if (!data[t]) continue; // ignore unknown types
-
+    if (!data[t]) continue;
     const normalized = _normalizeForUI(item, t);
     data[t].push(normalized);
   }
 
-  // enable types that have at least 1 item
   Object.keys(data).forEach(t => {
     if ((data[t] || []).length > 0) enabledTypes.add(t);
   });
 
   setButtonsEnabled(enabledTypes);
 
-  // Keep selection if still available
   if (currentType && enabledTypes.has(currentType)) {
     selectType(currentType);
   } else {
@@ -1063,10 +1144,9 @@ function applyLatestPayload(latest) {
   }
 }
 
-// ---- Polling ----
 async function pollLatest() {
   try {
-    const res = await fetch('/api/latest', { cache: 'no-store' });
+    const res = await fetch(`/api/latest?ts=${Date.now()}`, { cache: 'no-store' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
 
@@ -1079,8 +1159,16 @@ async function pollLatest() {
 
     const latest = json.latest;
 
-    // New submission -> reset UI selection
+    // If chat hasn't been bound to a submission yet, bind to the first latest we see.
+    // This keeps dashboard + chat in sync on first load.
+    if (!activeSubmissionId) {
+      activeSubmissionId = latest.id;
+    }
+
     if (latest.id !== lastSubmissionId) {
+        mapCenter = null;
+        activeMapMarkers.forEach(m => m.setMap(null));
+        activeMapMarkers = [];
       lastSubmissionId = latest.id;
       currentType = null;
       document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));

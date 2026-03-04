@@ -109,6 +109,25 @@ class TripPlan(db.Model):
 
     submission = db.relationship("WayfinderSubmission", backref=db.backref("trip_plan", uselist=False))
 
+class PlanEdit(db.Model):
+    __tablename__ = "plan_edit"
+
+    id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    submission_id = db.Column(db.Integer, db.ForeignKey("wayfinder_submission.id"), nullable=False, index=True)
+
+    source = db.Column(db.String(50), nullable=False, default="chat")  # chat/dashboard/etc
+    status = db.Column(db.String(50), nullable=False, default="pending")  # pending/applied/failed/rejected
+
+    user_message = db.Column(db.Text, nullable=False)
+    assistant_reply = db.Column(db.Text, nullable=True)
+
+    # optional: later store structured patch/diff
+    edit_json = db.Column(db.Text, nullable=True)
+
+    submission = db.relationship("WayfinderSubmission", backref=db.backref("plan_edits", lazy=True))
+
 
 # App routes
 @app.route("/", methods=["GET"])
@@ -194,11 +213,138 @@ def dashboard():
 @app.route("/api/chat", methods=["POST"])
 def chat():
     from agents.chat_agent import chat_with_plan
-    data = request.get_json()
-    messages = data.get("messages", [])
-    plan_context = data.get("plan_context", "")
+
+    data = request.get_json() or {}
+    messages = data.get("messages", []) or []
+    plan_context = data.get("plan_context", "") or ""
+    submission_id = data.get("submission_id")
+
+    # Option C controls:
+    apply_changes = bool(data.get("apply_changes", False))
+    edit = data.get("edit") or {}  # dict of fields to apply if confirmed
+
+    if not submission_id:
+        latest = WayfinderSubmission.query.order_by(WayfinderSubmission.created_at.desc()).first()
+        if not latest:
+            return jsonify({"reply": "No trip found yet. Please submit a trip request first."})
+        submission_id = latest.id
+
+    submission = WayfinderSubmission.query.get(submission_id)
+    if not submission:
+        return jsonify({"reply": f"Submission {submission_id} not found."}), 404
+
+    # find last user msg (for logging/audit)
+    user_last = None
+    for m in reversed(messages):
+        if m.get("role") == "user":
+            user_last = (m.get("content") or "").strip()
+            break
+    user_last = user_last or "User sent an empty message."
+
+    # Normal chat reply (LLM)
     reply = chat_with_plan(messages, plan_context)
-    return jsonify({"reply": reply})
+
+    # Always persist the chat turn as a PlanEdit record (audit trail)
+    pe = PlanEdit(
+        submission_id=submission.id,
+        source="chat",
+        status="pending",
+        user_message=user_last,
+        assistant_reply=reply,
+        edit_json=json.dumps(edit) if edit else None,
+    )
+    db.session.add(pe)
+    db.session.commit()
+
+    # -----------------------------
+    # OPTION C: if user confirmed a major change, create a NEW submission
+    # -----------------------------
+    new_submission_id = None
+    queued = False
+
+    if apply_changes:
+        # Build the new submission by copying old fields + applying overrides
+        new = WayfinderSubmission(
+            traveler_name=edit.get("traveler_name") or submission.traveler_name,
+            email=edit.get("email") or submission.email,
+
+            origin=edit.get("origin") or submission.origin,
+            desired_destination=edit.get("desired_destination") or submission.desired_destination,
+            travel_dates=edit.get("travel_dates") or submission.travel_dates,
+            budget=edit.get("budget") or submission.budget,
+
+            preferences=edit.get("preferences") or submission.preferences,
+
+            # Keep an audit-friendly raw_request trail
+            raw_request=(
+                (edit.get("raw_request") or submission.raw_request or "")
+                + f"\n\n[Chat edit confirmed] {user_last}"
+            ),
+
+            status="pending",
+            agent_result=None,
+        )
+        db.session.add(new)
+        db.session.commit()
+        new_submission_id = new.id
+
+        # Optional: link this plan edit to the new submission (if you add this column later)
+        # For now, we can just mark the plan edit as "applied" and store the new id in edit_json.
+        pe.status = "applied"
+        if edit:
+            edit_with_link = dict(edit)
+            edit_with_link["new_submission_id"] = new_submission_id
+            pe.edit_json = json.dumps(edit_with_link)
+        else:
+            pe.edit_json = json.dumps({"new_submission_id": new_submission_id})
+        db.session.commit()
+
+        # Seed a fresh pipeline for the new submission
+        for t in ["weather", "places", "transit", "supervisor_update"]:
+            db.session.add(
+                AgentTask(
+                    submission_id=new_submission_id,
+                    task_type=t,
+                    status="pending",
+                    input_json=None,
+                    attempts=0,
+                    max_attempts=3,
+                )
+            )
+        db.session.commit()
+        queued = True
+
+        return jsonify({
+            "reply": reply,
+            "apply_changes": True,
+            "plan_edit_id": pe.id,
+            "new_submission_id": new_submission_id,
+            "queued_pipeline": queued,
+        })
+
+    # -----------------------------
+    # Default behavior (no confirmed changes):
+    # just queue supervisor_update for SAME submission (your existing behavior)
+    # -----------------------------
+    db.session.add(
+        AgentTask(
+            submission_id=submission.id,
+            task_type="supervisor_update",
+            status="pending",
+            input_json=json.dumps({"reason": "plan_edit", "plan_edit_id": pe.id}),
+            attempts=0,
+            max_attempts=3,
+        )
+    )
+    db.session.commit()
+    queued = True
+
+    return jsonify({
+        "reply": reply,
+        "apply_changes": False,
+        "queued_supervisor_update": queued,
+        "plan_edit_id": pe.id,
+    })
 
 
 # helps with the dashboard JS later
@@ -247,8 +393,4 @@ def api_latest():
 
 
 if __name__ == "__main__":
-    # Create tables (commented out because tables already exist, do NOT run again)
-    # with app.app_context():
-    #     db.create_all()
-
     app.run(debug=True)

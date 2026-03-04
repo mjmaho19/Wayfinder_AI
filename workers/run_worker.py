@@ -11,7 +11,7 @@ from datetime import datetime
 # Import your Flask app + models from index.py
 # Run from repo root:
 #   python workers/run_worker.py
-from index import app, db, WayfinderSubmission, AgentTask, ToolResult, TripPlan  # type: ignore
+from index import app, db, WayfinderSubmission, AgentTask, ToolResult, TripPlan, PlanEdit  # type: ignore
 
 from agents.supervisor import run_supervisor
 from tools.weather_tool import run as run_weather
@@ -154,6 +154,22 @@ def _run_supervisor_task(task: AgentTask) -> None:
         _mark_failed(task, f"Submission {task.submission_id} not found.")
         return
 
+    # read supervisor_update task input (may include plan_edit_id)
+    task_input = _safe_load_task_input(task)
+
+    plan_edit = None
+    edit_request = None
+    if task_input.get("reason") == "plan_edit":
+        plan_edit_id = task_input.get("plan_edit_id")
+        if plan_edit_id:
+            plan_edit = PlanEdit.query.get(plan_edit_id)
+            if plan_edit:
+                edit_request = {
+                    "id": plan_edit.id,
+                    "source": plan_edit.source,
+                    "user_message": plan_edit.user_message,
+                }
+
     # Load all tool results for this submission
     results = (
         ToolResult.query.filter_by(submission_id=submission.id)
@@ -187,9 +203,20 @@ def _run_supervisor_task(task: AgentTask) -> None:
         "budget": submission.budget,
         "preferences": submission.preferences,
         "raw_request": submission.raw_request,
+
+        # attach edit request so supervisor can apply it
+        "edit_request": edit_request,
     }
 
-    supervisor_out = run_supervisor(submission_dict, tool_results, current_plan)
+    try:
+        supervisor_out = run_supervisor(submission_dict, tool_results, current_plan)
+    except Exception as exc:
+        # Mark edit failed if this supervisor run was caused by an edit
+        if plan_edit:
+            plan_edit.status = "failed"
+            db.session.commit()
+        _mark_failed(task, f"Supervisor error: {type(exc).__name__}: {exc}")
+        return
 
     status = supervisor_out.get("status", "processing")
     plan = supervisor_out.get("plan", {})
@@ -205,6 +232,11 @@ def _run_supervisor_task(task: AgentTask) -> None:
     # Update submission status
     submission.status = status
     db.session.commit()
+
+    # if we processed an edit, mark it applied
+    if plan_edit:
+        plan_edit.status = "applied"
+        db.session.commit()
 
     # Agentic behavior: enqueue tasks supervisor says are missing
     new_tasks = supervisor_out.get("new_tasks") or []
