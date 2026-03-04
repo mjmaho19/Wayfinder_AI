@@ -152,13 +152,6 @@
       overflow: hidden;
     }
 
-    /* SVG placeholder map */
-    .map-svg {
-      width: 100%;
-      height: 100%;
-      position: absolute;
-      inset: 0;
-    }
 
     .map-overlay-tl {
       position: absolute;
@@ -497,9 +490,100 @@
       <span class="status-dot"></span>
       Within 10 mi · San Francisco, CA
     </div>
-    <div class="avatar">JD</div>
+  <div class="avatar" id="chat-trigger" onclick="toggleChat()" title="Travel Assistant" style="cursor:pointer;">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>
   </div>
 </header>
+
+<div id="chat-panel" style="
+  position:fixed;bottom:24px;right:24px;
+  width:360px;height:500px;
+  background:#17171a;border:1px solid rgba(255,255,255,0.07);
+  border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.6);
+  display:none;flex-direction:column;z-index:100;overflow:hidden;">
+
+  <div style="padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:space-between;">
+    <span style="font-weight:600;font-size:14px;color:#e8e8ec;">Travel Assistant</span>
+    <span onclick="toggleChat()" style="cursor:pointer;color:#7c7c8a;font-size:18px;line-height:1;">&times;</span>
+  </div>
+
+  <div id="chat-messages" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;"></div>
+
+  <div style="padding:12px;border-top:1px solid rgba(255,255,255,0.07);display:flex;gap:8px;">
+    <input id="chat-input" type="text" placeholder="Ask about your trip…" onkeydown="if(event.key==='Enter')sendChat()" style="
+      flex:1;background:#1e1e23;border:1px solid rgba(255,255,255,0.07);
+      border-radius:8px;padding:8px 12px;color:#e8e8ec;font-size:13px;
+      font-family:inherit;outline:none;">
+    <button onclick="sendChat()" style="
+      background:#5b8dff;border:none;border-radius:8px;
+      padding:8px 14px;color:#fff;font-size:13px;
+      cursor:pointer;font-family:inherit;">Send</button>
+  </div>
+</div>
+
+<!-- ─── CHATBOT ────────────────────────────────── -->
+<script>
+let chatOpen = false;
+let chatHistory = [];
+
+function toggleChat() {
+  chatOpen = !chatOpen;
+  const panel = document.getElementById('chat-panel');
+  panel.style.display = chatOpen ? 'flex' : 'none';
+}
+
+function appendMessage(role, text) {
+  const el = document.createElement('div');
+  el.style.cssText = `
+    padding:10px 13px;border-radius:10px;font-size:13px;line-height:1.5;max-width:88%;
+    ${role === 'user'
+      ? 'background:#5b8dff;color:#fff;align-self:flex-end;'
+      : 'background:#1e1e23;color:#e8e8ec;align-self:flex-start;border:1px solid rgba(255,255,255,0.07);'}
+  `;
+  el.textContent = text;
+  document.getElementById('chat-messages').appendChild(el);
+  document.getElementById('chat-messages').scrollTop = 999999;
+}
+
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+
+  appendMessage('user', text);
+  chatHistory.push({ role: 'user', content: text });
+
+  // Get current plan context
+  let planContext = '';
+  try {
+    const res = await fetch('/api/latest');
+    const data = await res.json();
+    if (data?.latest?.plan?.plan_json) {
+      planContext = data.latest.plan.plan_json;
+    }
+  } catch(e) {}
+
+  appendMessage('assistant', '…');
+  const msgs = document.getElementById('chat-messages');
+  const thinking = msgs.lastChild;
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: chatHistory, plan_context: planContext })
+    });
+    const data = await res.json();
+    thinking.textContent = data.reply;
+    chatHistory.push({ role: 'assistant', content: data.reply });
+  } catch(e) {
+    thinking.textContent = 'Something went wrong. Try again.';
+  }
+}
+</script>
 
 <!-- ─── APP BODY ────────────────────────────────── -->
 <div class="app">
@@ -510,12 +594,9 @@
     <!-- MAP -->
     <div class="map-wrapper">
       <div id="map">
-        <!-- Google Maps -->
-        <div id="google-map" style="width:100%;height:100%;position:absolute;inset:0;">
-        </div>
-
-        <!-- Dynamic pins injected by JS -->
-        <div id="pins"></div>
+        <!-- Real Google Map (powered by Google Maps API) -->
+        <div id="google-map" style="width:100%;height:100%;position:absolute;inset:0;"></div>
+        <div id="map-loading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#141820;color:#7c7c8a;font-size:13px;z-index:10;pointer-events:none;">Loading map…</div>
 
         <!-- Map search -->
         <div class="map-overlay-tl">
@@ -529,13 +610,13 @@
 
         <!-- Map controls -->
         <div class="map-controls">
-          <div class="map-btn" title="Zoom in">
+          <div class="map-btn" title="Zoom in" onclick="wayfinder_mapZoom(1)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           </div>
-          <div class="map-btn" title="Zoom out">
+          <div class="map-btn" title="Zoom out" onclick="wayfinder_mapZoom(-1)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/></svg>
           </div>
-          <div class="map-btn" title="My location">
+          <div class="map-btn" title="Re-center" onclick="wayfinder_recenter()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
           </div>
         </div>
@@ -783,33 +864,120 @@ function renderCard(item, type) {
   return card;
 }
 
-function renderPins(type) {
-  const pinsEl = document.getElementById('pins');
-  pinsEl.innerHTML = '';
-  const mapEl = document.getElementById('map');
-  const mw = mapEl.offsetWidth, mh = mapEl.offsetHeight;
 
-  (data[type] || []).forEach((item, i) => {
-    // If x/y missing, scatter lightly so pins still show
-    const x = (typeof item.x === 'number') ? item.x : (20 + Math.random() * 60);
-    const y = (typeof item.y === 'number') ? item.y : (25 + Math.random() * 50);
+// ── Google Maps integration ──────────────────────────────────────────────────
+let gmap = null;
+let userLocation = null;
+let mapCenter = null;
+let activeMapMarkers = [];
 
-    const pin = document.createElement('div');
-    pin.className = `pin type-${type}`;
-    pin.style.left = (x / 100 * mw) + 'px';
-    pin.style.top  = (y / 100 * mh) + 'px';
-    pin.innerHTML = `
-      <div class="pin-bubble">${item.name ?? 'Location'}</div>
-      <div class="pin-icon">${item.icon ?? '📍'}</div>
-      <div class="pin-stem"></div>
-    `;
-    pinsEl.appendChild(pin);
-    setTimeout(() => pin.classList.add('visible'), i * 60);
-    pin.addEventListener('click', () => {
-      document.querySelectorAll('.pin').forEach(p => p.classList.remove('active'));
-      pin.classList.toggle('active');
-    });
+const DARK_STYLES = [
+  { elementType: 'geometry',           stylers: [{ color: '#141820' }] },
+  { elementType: 'labels.text.fill',   stylers: [{ color: '#7c7c8a' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#0f0f11' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#222840' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#111a2c' }] },
+  { featureType: 'poi', stylers: [{ visibility: 'off' }] }
+];
+
+const MAP_MARKER_COLORS = {
+  restaurant: '#f97316',
+  hotel:      '#a78bfa',
+  shop:       '#34d399',
+  poi:        '#60a5fa',
+  bathroom:   '#94a3b8',
+};
+
+async function initMap() {
+  const { Map } = await google.maps.importLibrary("maps");
+  const loadingEl = document.getElementById('map-loading');
+
+  gmap = new Map(document.getElementById('google-map'), {
+    center: { lat: 20.0, lng: 0.0 },
+    zoom: 2,
+    disableDefaultUI: true,
+    styles: DARK_STYLES
   });
+
+  if (loadingEl) loadingEl.style.display = 'none';
+
+  // Try geolocation (optional bonus — not required)
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition((pos) => {
+      userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      if (!mapCenter) {
+        gmap.setCenter(userLocation);
+        gmap.setZoom(13);
+      }
+      new google.maps.Marker({
+        position: userLocation,
+        map: gmap,
+        title: 'You are here',
+        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#5b8dff', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 },
+        zIndex: 999
+      });
+    }, () => {
+      // Geolocation denied — map still works via destination data
+    });
+  }
+}
+
+function wayfinder_mapZoom(delta) {
+  if (gmap) gmap.setZoom(gmap.getZoom() + delta);
+}
+
+function wayfinder_recenter() {
+  if (!gmap) return;
+  if (mapCenter) { gmap.setCenter(mapCenter); gmap.setZoom(14); }
+  else if (userLocation) { gmap.setCenter(userLocation); gmap.setZoom(13); }
+}
+
+function renderPins(type) {
+  // Clear old markers
+  activeMapMarkers.forEach(m => m.setMap(null));
+  activeMapMarkers = [];
+
+  if (!gmap) return;
+
+  const items = data[type] || [];
+  const color = MAP_MARKER_COLORS[type] || '#ffffff';
+
+  items.forEach(item => {
+    if (!item.lat || !item.lng) return;
+
+    const marker = new google.maps.Marker({
+      position: { lat: item.lat, lng: item.lng },
+      map: gmap,
+      title: item.name,
+      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: color, fillOpacity: 1, strokeColor: '#fff', strokeWeight: 1.5 }
+    });
+
+    const infoWindow = new google.maps.InfoWindow({
+      content: `<div style="background:#1a1d2e;color:#e8e8ec;padding:8px 12px;border-radius:8px;font-family:sans-serif;font-size:13px;min-width:140px;">
+        <strong>${item.name}</strong><br/>
+        <span style="color:#7c7c8a;">${item.type || type}</span>
+        ${item.rating ? `<br/><span style="color:#fbbf24;">&#9733; ${item.rating}</span>` : ''}
+        ${item.distance_mi ? `<br/><span style="color:#7c7c8a;">&#128205; ${item.distance_mi} mi</span>` : ''}
+      </div>`
+    });
+
+    marker.addListener('click', () => infoWindow.open(gmap, marker));
+    activeMapMarkers.push(marker);
+  });
+
+  // Center map on destination if we have it
+  if (mapCenter) { gmap.setCenter(mapCenter); gmap.setZoom(14); }
+}
+
+// Called by applyLatestPayload to update map center when places data arrives
+function updateMapCenter(placesPayload) {
+  if (placesPayload?.center?.lat && placesPayload?.center?.lng && gmap) {
+    mapCenter = { lat: placesPayload.center.lat, lng: placesPayload.center.lng };
+    if (!currentType) {
+      gmap.setCenter(mapCenter);
+      gmap.setZoom(14);
+    }
+  }
 }
 
 function selectType(type) {
@@ -867,6 +1035,9 @@ function applyLatestPayload(latest) {
   const placesPayload = parsePlacesResultJson(placesRow.result_json);
   const items = Array.isArray(placesPayload?.items) ? placesPayload.items : [];
 
+  // Update real map center from places tool data
+  updateMapCenter(placesPayload);
+
   // Group items by item.type
   for (const item of items) {
     const t = (item?.type || '').toLowerCase();
@@ -921,535 +1092,15 @@ async function pollLatest() {
 }
 
 // ---- Events ----
-let gmap = null;
-let userLocation = null;
-let activeMarkers = [];
-let userMarker = null;
-
-async function initMap() {
-  const { Map } = await google.maps.importLibrary("maps");
-
-  if (!navigator.geolocation) {
-    document.getElementById('google-map').innerHTML = '<div style="color:#e8e8ec;display:flex;align-items:center;justify-content:center;height:100%;font-size:13px;">Geolocation is not supported by your browser.</div>';
-    return;
-  }
-
-  navigator.geolocation.getCurrentPosition(
-    (pos) => {
-      userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-      gmap = new Map(document.getElementById('google-map'), {
-        center: userLocation,
-        zoom: 14,
-        disableDefaultUI: true,
-        styles: [
-          { elementType: 'geometry', stylers: [{ color: '#141820' }] },
-          { elementType: 'labels.text.fill', stylers: [{ color: '#7c7c8a' }] },
-          { elementType: 'labels.text.stroke', stylers: [{ color: '#0f0f11' }] },
-          { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#222840' }] },
-          { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#111a2c' }] },
-          { featureType: 'poi', stylers: [{ visibility: 'off' }] }
-        ]
-      });
-
-      // User location marker
-      userMarker = new google.maps.Marker({
-        position: userLocation,
-        map: gmap,
-        title: 'You are here',
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 10,
-          fillColor: '#5b8dff',
-          fillOpacity: 1,
-          strokeColor: '#fff',
-          strokeWeight: 2
-        },
-        zIndex: 999
-      });
-    },
-    () => {
-      document.getElementById('google-map').innerHTML = '<div style="color:#e8e8ec;display:flex;align-items:center;justify-content:center;height:100%;font-size:13px;">Location access denied. Please enable location permissions and refresh.</div>';
-    }
-  );
-}
-
-function calcDistanceMi(lat1, lng1, lat2, lng2) {
-  const R = 3958.8;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLng = (lng2 - lng1) * Math.PI / 180;
-  const a = Math.sin(dLat/2) ** 2 +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-            Math.sin(dLng/2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-async function searchNearbyHotels() {
-  if (!gmap || !userLocation) return;
-
-  activeMarkers.forEach(m => m.setMap(null));
-  activeMarkers = [];
-
-  const { PlacesService, PlacesServiceStatus } = await google.maps.importLibrary("places");
-  const service = new PlacesService(gmap);
-
-  const list = document.getElementById('results-list');
-  const label = document.getElementById('results-label');
-  const count = document.getElementById('results-count');
-  const colH = document.getElementById('col-headers');
-
-  list.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-text">Searching nearby hotels…</div></div>';
-  label.textContent = 'Nearby Hotels';
-  count.textContent = '…';
-  colH.style.display = 'none';
-
-  service.nearbySearch({
-    location: userLocation,
-    radius: 8047,
-    type: 'lodging'
-  }, (results, status) => {
-    if (status !== PlacesServiceStatus.OK) {
-      list.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Could not load hotels. Try again.</div></div>';
-      count.textContent = '0';
-      return;
-    }
-
-    const top10 = results.slice(0, 10);
-    count.textContent = `${top10.length} found`;
-    list.innerHTML = '';
-
-    top10.forEach((place) => {
-      const lat = place.geometry.location.lat();
-      const lng = place.geometry.location.lng();
-      const dist = calcDistanceMi(userLocation.lat, userLocation.lng, lat, lng).toFixed(1);
-
-      const marker = new google.maps.Marker({
-        position: place.geometry.location,
-        map: gmap,
-        title: place.name,
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 8,
-          fillColor: '#a78bfa',
-          fillOpacity: 1,
-          strokeColor: '#fff',
-          strokeWeight: 1.5
-        }
-      });
-      activeMarkers.push(marker);
-
-      const rating = place.rating ?? null;
-      const starsStr = rating ? '★'.repeat(Math.round(rating)) + '☆'.repeat(5 - Math.round(rating)) + ` ${rating}` : '';
-      const priceLevel = place.price_level ? '$'.repeat(place.price_level) + '/night' : 'Price N/A';
-
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.innerHTML = `
-        <div class="card-icon" style="background:rgba(167,139,250,0.15);font-size:20px">🏨</div>
-        <div class="card-body">
-          <div class="card-name">${place.name}</div>
-          <div class="card-sub">Hotel</div>
-        </div>
-        <div class="card-right">
-          <span class="badge">${priceLevel}</span>
-          ${starsStr ? `<span class="stars">${starsStr}</span>` : ''}
-          <span class="dist">📍 ${dist} mi</span>
-        </div>
-      `;
-
-      card.addEventListener('click', () => {
-        activeMarkers.forEach(m => m.setIcon({
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 8,
-          fillColor: '#a78bfa',
-          fillOpacity: 1,
-          strokeColor: '#fff',
-          strokeWeight: 1.5
-        }));
-        marker.setIcon({
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 12,
-          fillColor: '#fbbf24',
-          fillOpacity: 1,
-          strokeColor: '#fff',
-          strokeWeight: 2
-        });
-        document.querySelectorAll('.card').forEach(c => c.style.borderColor = '');
-        card.style.borderColor = '#fbbf24';
-        gmap.panTo(place.geometry.location);
-      });
-
-      list.appendChild(card);
-    });
-  });
-}
-
-async function searchNearbyBathrooms() {
-  if (!gmap || !userLocation) return;
-
-  activeMarkers.forEach(m => m.setMap(null));
-  activeMarkers = [];
-
-  const { PlacesService, PlacesServiceStatus } = await google.maps.importLibrary("places");
-  const service = new PlacesService(gmap);
-
-  const list = document.getElementById('results-list');
-  const label = document.getElementById('results-label');
-  const count = document.getElementById('results-count');
-  const colH = document.getElementById('col-headers');
-
-  list.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-text">Searching nearby restrooms…</div></div>';
-  label.textContent = 'Nearby Restrooms';
-  count.textContent = '…';
-  colH.style.display = 'none';
-
-  service.nearbySearch({
-    location: userLocation,
-    radius: 8047,
-    keyword: 'public restroom',
-    type: 'point_of_interest'
-  }, (results, status) => {
-    if (status !== PlacesServiceStatus.OK) {
-      list.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Could not load restrooms. Try again.</div></div>';
-      count.textContent = '0';
-      return;
-    }
-
-    const top10 = results.slice(0, 10);
-    count.textContent = `${top10.length} found`;
-    list.innerHTML = '';
-
-    top10.forEach((place) => {
-      const lat = place.geometry.location.lat();
-      const lng = place.geometry.location.lng();
-      const dist = calcDistanceMi(userLocation.lat, userLocation.lng, lat, lng).toFixed(1);
-
-      const marker = new google.maps.Marker({
-        position: place.geometry.location,
-        map: gmap,
-        title: place.name,
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 8,
-          fillColor: '#34d399',
-          fillOpacity: 1,
-          strokeColor: '#fff',
-          strokeWeight: 1.5
-        }
-      });
-      activeMarkers.push(marker);
-
-      const rating = place.rating ?? null;
-      const starsStr = rating ? '★'.repeat(Math.round(rating)) + '☆'.repeat(5 - Math.round(rating)) + ` ${rating}` : '';
-      const address = place.vicinity ?? 'Address unavailable';
-      const hours = place.opening_hours?.isOpen?.() ? 'Open now' : place.opening_hours ? 'Closed' : null;
-      const accessible = place.wheelchair_accessible_entrance ?? false;
-
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.innerHTML = `
-        <div class="card-icon" style="background:rgba(52,211,153,0.15);font-size:20px">🚻</div>
-        <div class="card-body">
-          <div class="card-name">${place.name}</div>
-          <div class="card-sub">${address}</div>
-        </div>
-        <div class="card-right">
-          ${accessible ? '<span class="badge" title="Wheelchair accessible">♿</span>' : ''}
-          ${hours ? `<span class="badge">${hours}</span>` : ''}
-          ${starsStr ? `<span class="stars">${starsStr}</span>` : ''}
-          <span class="dist">📍 ${dist} mi</span>
-        </div>
-      `;
-
-      card.addEventListener('click', () => {
-        activeMarkers.forEach(m => m.setIcon({
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 8,
-          fillColor: '#34d399',
-          fillOpacity: 1,
-          strokeColor: '#fff',
-          strokeWeight: 1.5
-        }));
-        marker.setIcon({
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 12,
-          fillColor: '#fbbf24',
-          fillOpacity: 1,
-          strokeColor: '#fff',
-          strokeWeight: 2
-        });
-        document.querySelectorAll('.card').forEach(c => c.style.borderColor = '');
-        card.style.borderColor = '#fbbf24';
-        gmap.panTo(place.geometry.location);
-      });
-
-      list.appendChild(card);
-    });
-  });
-}
-
-async function searchNearbyPOI() {
-  if (!gmap || !userLocation) return;
-
-  activeMarkers.forEach(m => m.setMap(null));
-  activeMarkers = [];
-
-  const { PlacesService, PlacesServiceStatus } = await google.maps.importLibrary("places");
-  const service = new PlacesService(gmap);
-
-  const list = document.getElementById('results-list');
-  const label = document.getElementById('results-label');
-  const count = document.getElementById('results-count');
-  const colH = document.getElementById('col-headers');
-
-  list.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-text">Searching nearby points of interest…</div></div>';
-  label.textContent = 'Explore Nearby';
-  count.textContent = '…';
-  colH.style.display = 'none';
-
-  // Run two searches in parallel — tourist attractions and museums
-  const searchPromise = (type) => new Promise((resolve) => {
-    service.nearbySearch({
-      location: userLocation,
-      radius: 8047,
-      type
-    }, (results, status) => {
-      resolve(status === PlacesServiceStatus.OK ? results : []);
-    });
-  });
-
-  const [attractions, museums] = await Promise.all([
-    searchPromise('tourist_attraction'),
-    searchPromise('museum')
-  ]);
-
-  // Merge and deduplicate by place_id
-  const seen = new Set();
-  const combined = [...attractions, ...museums].filter(place => {
-    if (seen.has(place.place_id)) return false;
-    seen.add(place.place_id);
-    return true;
-  });
-
-  // Sort by rating descending
-  combined.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
-  const top10 = combined.slice(0, 10);
-
-  if (top10.length === 0) {
-    list.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">No points of interest found nearby.</div></div>';
-    count.textContent = '0';
-    return;
-  }
-
-  count.textContent = `${top10.length} found`;
-  list.innerHTML = '';
-
-  // POI type → emoji
-  const poiIcon = (types) => {
-    if (types.includes('museum')) return '🏛️';
-    if (types.includes('park')) return '🌳';
-    if (types.includes('church') || types.includes('place_of_worship')) return '⛪';
-    if (types.includes('stadium')) return '🏟️';
-    if (types.includes('movie_theater')) return '🎬';
-    if (types.includes('amusement_park')) return '🎡';
-    if (types.includes('zoo')) return '🦁';
-    if (types.includes('art_gallery')) return '🎨';
-    return '📍';
-  };
-
-  top10.forEach((place) => {
-    const lat = place.geometry.location.lat();
-    const lng = place.geometry.location.lng();
-    const dist = calcDistanceMi(userLocation.lat, userLocation.lng, lat, lng).toFixed(1);
-
-    const marker = new google.maps.Marker({
-      position: place.geometry.location,
-      map: gmap,
-      title: place.name,
-      icon: {
-        path: google.maps.SymbolPath.CIRCLE,
-        scale: 8,
-        fillColor: '#fbbf24',
-        fillOpacity: 1,
-        strokeColor: '#fff',
-        strokeWeight: 1.5
-      }
-    });
-    activeMarkers.push(marker);
-
-    const rating = place.rating ?? null;
-    const starsStr = rating ? '★'.repeat(Math.round(rating)) + '☆'.repeat(5 - Math.round(rating)) + ` ${rating}` : '';
-    const type = place.types?.[0]?.replace(/_/g, ' ') ?? 'Point of Interest';
-    const icon = poiIcon(place.types ?? []);
-    const hours = place.opening_hours?.isOpen?.() ? 'Open now' : place.opening_hours ? 'Closed' : null;
-
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.innerHTML = `
-      <div class="card-icon" style="background:rgba(251,191,36,0.15);font-size:20px">${icon}</div>
-      <div class="card-body">
-        <div class="card-name">${place.name}</div>
-        <div class="card-sub">${type}</div>
-      </div>
-      <div class="card-right">
-        ${hours ? `<span class="badge">${hours}</span>` : ''}
-        ${starsStr ? `<span class="stars">${starsStr}</span>` : ''}
-        <span class="dist">📍 ${dist} mi</span>
-      </div>
-    `;
-
-    card.addEventListener('click', () => {
-      activeMarkers.forEach(m => m.setIcon({
-        path: google.maps.SymbolPath.CIRCLE,
-        scale: 8,
-        fillColor: '#fbbf24',
-        fillOpacity: 1,
-        strokeColor: '#fff',
-        strokeWeight: 1.5
-      }));
-      marker.setIcon({
-        path: google.maps.SymbolPath.CIRCLE,
-        scale: 12,
-        fillColor: '#ff6b6b',
-        fillOpacity: 1,
-        strokeColor: '#fff',
-        strokeWeight: 2
-      });
-      document.querySelectorAll('.card').forEach(c => c.style.borderColor = '');
-      card.style.borderColor = '#fbbf24';
-      gmap.panTo(place.geometry.location);
-    });
-
-    list.appendChild(card);
-  });
-}
-
-async function searchNearbyRestaurants() {
-  if (!gmap || !userLocation) return;
-
-  // Clear old markers (but keep user marker)
-  activeMarkers.forEach(m => m.setMap(null));
-  activeMarkers = [];
-
-  const { PlacesService, PlacesServiceStatus } = await google.maps.importLibrary("places");
-  const service = new PlacesService(gmap);
-
-  const list = document.getElementById('results-list');
-  const label = document.getElementById('results-label');
-  const count = document.getElementById('results-count');
-  const colH = document.getElementById('col-headers');
-
-  list.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-text">Searching nearby restaurants…</div></div>';
-  label.textContent = 'Nearby Restaurants';
-  count.textContent = '…';
-  colH.style.display = 'none';
-
-  service.nearbySearch({
-    location: userLocation,
-    radius: 8047,
-    type: 'restaurant'
-  }, (results, status) => {
-    if (status !== PlacesServiceStatus.OK) {
-      list.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Could not load restaurants. Try again.</div></div>';
-      count.textContent = '0';
-      return;
-    }
-
-    const top10 = results.slice(0, 10);
-    count.textContent = `${top10.length} found`;
-    list.innerHTML = '';
-
-    top10.forEach((place, i) => {
-      const lat = place.geometry.location.lat();
-      const lng = place.geometry.location.lng();
-      const dist = calcDistanceMi(userLocation.lat, userLocation.lng, lat, lng).toFixed(1);
-
-      // Map marker
-      const marker = new google.maps.Marker({
-        position: place.geometry.location,
-        map: gmap,
-        title: place.name,
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 8,
-          fillColor: '#ff6b6b',
-          fillOpacity: 1,
-          strokeColor: '#fff',
-          strokeWeight: 1.5
-        }
-      });
-      activeMarkers.push(marker);
-
-      // Result card
-      const rating = place.rating ?? null;
-      const starsStr = rating ? '★'.repeat(Math.round(rating)) + '☆'.repeat(5 - Math.round(rating)) + ` ${rating}` : '';
-      const type = place.types?.[0]?.replace(/_/g, ' ') ?? 'Restaurant';
-      const priceLevel = place.price_level ? '$'.repeat(place.price_level) : '';
-
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.innerHTML = `
-        <div class="card-icon" style="background:rgba(255,107,107,0.15);font-size:20px">🍽️</div>
-        <div class="card-body">
-          <div class="card-name">${place.name}</div>
-          <div class="card-sub">${type}</div>
-        </div>
-        <div class="card-right">
-          ${priceLevel ? `<span class="badge">${priceLevel}</span>` : ''}
-          ${starsStr ? `<span class="stars">${starsStr}</span>` : ''}
-          <span class="dist">📍 ${dist} mi</span>
-        </div>
-      `;
-
-      // Click card → highlight marker and pan to it
-      card.addEventListener('click', () => {
-        // Reset all markers to red
-        activeMarkers.forEach(m => m.setIcon({
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 8,
-          fillColor: '#ff6b6b',
-          fillOpacity: 1,
-          strokeColor: '#fff',
-          strokeWeight: 1.5
-        }));
-
-        // Highlight clicked marker in yellow and make it bigger
-        marker.setIcon({
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 12,
-          fillColor: '#fbbf24',
-          fillOpacity: 1,
-          strokeColor: '#fff',
-          strokeWeight: 2
-        });
-
-        // Remove highlight from all cards
-        document.querySelectorAll('.card').forEach(c => c.style.borderColor = '');
-        card.style.borderColor = '#fbbf24';
-
-        // Pan map to the marker
-        gmap.panTo(place.geometry.location);
-      });
-
-      list.appendChild(card);
-    });
-  });
-}
-
 document.querySelectorAll('.filter-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     if (btn.disabled) return;
 
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-
-    if (btn.dataset.type === 'restaurant') {
-      searchNearbyRestaurants();
-    } else if (btn.dataset.type === 'hotel') {
-      searchNearbyHotels();
-    } else if (btn.dataset.type === 'bathroom') {
-      searchNearbyBathrooms();
-    } else if (btn.dataset.type === 'poi') {
-      searchNearbyPOI();
+    if (currentType === btn.dataset.type) {
+      currentType = null;
+      btn.classList.remove('active');
+      document.getElementById('pins').innerHTML = '';
+      setSelectPromptState();
     } else {
       selectType(btn.dataset.type);
     }
