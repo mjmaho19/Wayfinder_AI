@@ -33,7 +33,7 @@
       color: var(--text);
       font-family: 'DM Sans', sans-serif;
       font-size: 14px;
-      overflow: hidden;
+      overflow-y: auto;
     }
 
     /* ─── HEADER ─────────────────────────────── */
@@ -120,7 +120,7 @@
     .app {
       display: flex;
       flex-direction: column;
-      height: calc(100vh - 58px);
+      min-height: calc(100vh - 58px);
       padding: 20px;
       gap: 16px;
     }
@@ -317,6 +317,8 @@
 
     /* ─── RESULTS PANEL ──────────────────────── */
     .results-panel {
+      height: 400px;
+      overflow-y: auto;
       flex: 1;
       background: var(--surface);
       border: 1px solid var(--border);
@@ -362,6 +364,7 @@
 
     .results-list {
       overflow-y: auto;
+      max-height: 340px;
       flex: 1;
       padding: 12px;
       display: flex;
@@ -488,7 +491,7 @@
   <div class="header-right">
     <div class="pill">
       <span class="status-dot"></span>
-      Within 10 mi · San Francisco, CA
+      <span id="header-location">Locating…</span>
     </div>
   <div class="avatar" id="chat-trigger" onclick="toggleChat()" title="Travel Assistant" style="cursor:pointer;">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
@@ -523,68 +526,6 @@
   </div>
 </div>
 
-<!-- ─── CHATBOT ────────────────────────────────── -->
-<script>
-let chatOpen = false;
-let chatHistory = [];
-
-function toggleChat() {
-  chatOpen = !chatOpen;
-  const panel = document.getElementById('chat-panel');
-  panel.style.display = chatOpen ? 'flex' : 'none';
-}
-
-function appendMessage(role, text) {
-  const el = document.createElement('div');
-  el.style.cssText = `
-    padding:10px 13px;border-radius:10px;font-size:13px;line-height:1.5;max-width:88%;
-    ${role === 'user'
-      ? 'background:#5b8dff;color:#fff;align-self:flex-end;'
-      : 'background:#1e1e23;color:#e8e8ec;align-self:flex-start;border:1px solid rgba(255,255,255,0.07);'}
-  `;
-  el.textContent = text;
-  document.getElementById('chat-messages').appendChild(el);
-  document.getElementById('chat-messages').scrollTop = 999999;
-}
-
-async function sendChat() {
-  const input = document.getElementById('chat-input');
-  const text = input.value.trim();
-  if (!text) return;
-  input.value = '';
-
-  appendMessage('user', text);
-  chatHistory.push({ role: 'user', content: text });
-
-  // Get current plan context
-  let planContext = '';
-  try {
-    const res = await fetch('/api/latest');
-    const data = await res.json();
-    if (data?.latest?.plan?.plan_json) {
-      planContext = data.latest.plan.plan_json;
-    }
-  } catch(e) {}
-
-  appendMessage('assistant', '…');
-  const msgs = document.getElementById('chat-messages');
-  const thinking = msgs.lastChild;
-
-  try {
-    const res = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: chatHistory, plan_context: planContext })
-    });
-    const data = await res.json();
-    thinking.textContent = data.reply;
-    chatHistory.push({ role: 'assistant', content: data.reply });
-  } catch(e) {
-    thinking.textContent = 'Something went wrong. Try again.';
-  }
-}
-</script>
-
 <!-- ─── APP BODY ────────────────────────────────── -->
 <div class="app">
 
@@ -596,7 +537,31 @@ async function sendChat() {
       <div id="map">
         <!-- Real Google Map (powered by Google Maps API) -->
         <div id="google-map" style="width:100%;height:100%;position:absolute;inset:0;"></div>
-        <div id="map-loading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#141820;color:#7c7c8a;font-size:13px;z-index:10;pointer-events:none;">Loading map…</div>
+        <div id="map-loading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#141820;color:#7c7c8a;font-size:13px;z-index:10;pointer-events:none;">Loading map…
+        </div>
+
+        <!-- Weather Widget -->
+        <div id="weather-widget" onclick="toggleWeather()" style="
+        position:absolute;top:14px;right:14px;z-index:10;
+        background:rgba(23,23,26,0.92);backdrop-filter:blur(12px);
+        border:1px solid rgba(255,255,255,0.07);border-radius:10px;
+        padding:8px 14px;cursor:pointer;min-width:120px;
+        transition: all .2s;">
+        <div id="weather-collapsed" style="display:flex;align-items:center;gap:8px;">
+          <span id="weather-icon" style="font-size:18px;">⏳</span>
+          <div>
+            <div id="weather-temp" style="font-size:13px;font-weight:600;color:#e8e8ec;">--°C</div>
+            <div id="weather-condition" style="font-size:10px;color:#7c7c8a;">Loading…</div>
+          </div>
+        </div>
+        <div id="weather-expanded" style="display:none;margin-top:10px;border-top:1px solid rgba(255,255,255,0.07);padding-top:10px;">
+          <div id="weather-details" style="font-size:11px;color:#7c7c8a;margin-bottom:8px;"></div>
+          <div id="weather-forecast" style="display:flex;flex-direction:column;gap:4px;"></div>
+        </div>
+    </div>
+
+    <!-- Dynamic pins injected by JS -->
+        <div id="pins" style="position:absolute;inset:0;pointer-events:none;"></div>
 
         <!-- Map search -->
         <div class="map-overlay-tl">
@@ -674,6 +639,43 @@ async function sendChat() {
       </div>
     </div>
   </div>
+
+  <!-- TRANSIT BLOCK -->
+<div class="panel" id="transit-panel" style="margin-top:12px;height:400px;">
+  <div class="panel-header" style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.07);">
+    <span style="font-size:13px;font-weight:600;color:#e8e8ec;">Transit Routes</span>
+    <div style="display:flex;gap:8px;">
+      <button id="btn-bus" onclick="selectTransitMode('BUS')" style="
+        padding:5px 14px;border-radius:6px;font-size:12px;font-family:inherit;cursor:pointer;
+        background:#5b8dff;color:#fff;border:none;">🚌 Bus</button>
+      <button id="btn-rail" onclick="selectTransitMode('RAIL')" style="
+        padding:5px 14px;border-radius:6px;font-size:12px;font-family:inherit;cursor:pointer;
+        background:#1e1e23;color:#7c7c8a;border:1px solid rgba(255,255,255,0.07);">🚆 Train</button>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:10px;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.07);">
+    <input id="transit-from" type="text" placeholder="From…" style="
+      flex:1;background:#1e1e23;border:1px solid rgba(255,255,255,0.07);
+      border-radius:8px;padding:8px 12px;color:#e8e8ec;font-size:13px;
+      font-family:inherit;outline:none;">
+    <div style="display:flex;align-items:center;color:#7c7c8a;font-size:16px;">⇄</div>
+    <input id="transit-to" type="text" placeholder="To…" style="
+      flex:1;background:#1e1e23;border:1px solid rgba(255,255,255,0.07);
+      border-radius:8px;padding:8px 12px;color:#e8e8ec;font-size:13px;
+      font-family:inherit;outline:none;">
+    <button onclick="searchTransit()" style="
+      background:#5b8dff;border:none;border-radius:8px;
+      padding:8px 16px;color:#fff;font-size:13px;
+      cursor:pointer;font-family:inherit;">Search</button>
+  </div>
+
+  <div id="transit-results" style="padding:14px 18px;min-height:80px;max-height:300px;">
+    <div style="color:#7c7c8a;font-size:13px;text-align:center;padding:24px 0;">
+      Enter origin and destination to search routes.
+    </div>
+  </div>
+</div>
 
 </div>
 
@@ -864,6 +866,65 @@ function renderCard(item, type) {
   return card;
 }
 
+const WMO = {
+  0:"Clear Sky", 1:"Mainly Clear", 2:"Partly Cloudy", 3:"Overcast",
+  45:"Foggy", 48:"Icy Fog", 51:"Light Drizzle", 53:"Moderate Drizzle",
+  55:"Heavy Drizzle", 61:"Light Rain", 63:"Moderate Rain", 65:"Heavy Rain",
+  71:"Light Snow", 73:"Moderate Snow", 75:"Heavy Snow",
+  80:"Light Showers", 81:"Moderate Showers", 82:"Heavy Showers",
+  95:"Thunderstorm", 96:"Thunderstorm w/ Hail"
+};
+const WMO_ICON = {
+  0:"☀️", 1:"🌤️", 2:"⛅", 3:"☁️", 45:"🌫️", 48:"🌫️",
+  51:"🌦️", 53:"🌦️", 55:"🌧️", 61:"🌧️", 63:"🌧️", 65:"🌧️",
+  71:"🌨️", 73:"🌨️", 75:"❄️", 80:"🌦️", 81:"🌧️", 82:"⛈️",
+  95:"⛈️", 96:"⛈️"
+};
+
+let weatherExpanded = false;
+
+function toggleWeather() {
+  weatherExpanded = !weatherExpanded;
+  document.getElementById('weather-expanded').style.display = weatherExpanded ? 'block' : 'none';
+}
+
+async function loadWeather() {
+  try {
+    const res = await fetch('/api/weather');
+    const data = await res.json();
+    if (data.error) return;
+
+    const current = data.current;
+    const code = current.weather_code ?? 0;
+
+    document.getElementById('weather-icon').textContent = WMO_ICON[code] ?? '🌡️';
+    document.getElementById('weather-temp').textContent = `${current.temperature_2m}°C`;
+    document.getElementById('weather-condition').textContent = WMO[code] ?? 'Unknown';
+
+    document.getElementById('weather-details').innerHTML =
+      `💨 ${current.wind_speed_10m} km/h &nbsp;|&nbsp; 💧 ${current.relative_humidity_2m}%`;
+
+    const daily = data.daily;
+    const days = daily.time || [];
+    const forecastEl = document.getElementById('weather-forecast');
+    forecastEl.innerHTML = '';
+    days.forEach((date, i) => {
+      const dayCode = daily.weather_code[i] ?? 0;
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#e8e8ec;';
+      row.innerHTML = `
+        <span style="color:#7c7c8a;width:70px;">${new Date(date + 'T12:00').toLocaleDateString('en', {weekday:'short', month:'short', day:'numeric'})}</span>
+        <span>${WMO_ICON[dayCode] ?? '🌡️'}</span>
+        <span style="color:#5b8dff;">${daily.temperature_2m_max[i]}°</span>
+        <span style="color:#7c7c8a;">${daily.temperature_2m_min[i]}°</span>
+      `;
+      forecastEl.appendChild(row);
+    });
+
+  } catch(e) {
+    document.getElementById('weather-condition').textContent = 'Unavailable';
+  }
+}
 
 // ── Google Maps integration ──────────────────────────────────────────────────
 let gmap = null;
@@ -887,6 +948,38 @@ const MAP_MARKER_COLORS = {
   poi:        '#60a5fa',
   bathroom:   '#94a3b8',
 };
+
+async function updateHeaderLocation() {
+  // First try to get city from the latest submission's destination
+  try {
+    const res = await fetch('/api/latest');
+    const data = await res.json();
+    const dest = data?.latest?.desired_destination;
+    if (dest) {
+      document.getElementById('header-location').textContent = dest;
+      return;
+    }
+  } catch(e) {}
+
+  // Fall back to browser geolocation + reverse geocode
+  if (!navigator.geolocation) {
+    document.getElementById('header-location').textContent = 'Location unavailable';
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const { latitude: lat, longitude: lng } = pos.coords;
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
+      const data = await res.json();
+      const city = data?.address?.city || data?.address?.town || data?.address?.county || 'Unknown location';
+      document.getElementById('header-location').textContent = city;
+    } catch(e) {
+      document.getElementById('header-location').textContent = 'Location unavailable';
+    }
+  }, () => {
+    document.getElementById('header-location').textContent = 'Location unavailable';
+  });
+}
 
 async function initMap() {
   const { Map } = await google.maps.importLibrary("maps");
@@ -1107,10 +1200,136 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
   });
 });
 
+let transitMode = 'BUS';
+
+function selectTransitMode(mode) {
+  transitMode = mode;
+  document.getElementById('btn-bus').style.background = mode === 'BUS' ? '#5b8dff' : '#1e1e23';
+  document.getElementById('btn-bus').style.color = mode === 'BUS' ? '#fff' : '#7c7c8a';
+  document.getElementById('btn-rail').style.background = mode === 'RAIL' ? '#5b8dff' : '#1e1e23';
+  document.getElementById('btn-rail').style.color = mode === 'RAIL' ? '#fff' : '#7c7c8a';
+}
+
+async function searchTransit() {
+  const from = document.getElementById('transit-from').value.trim();
+  const to = document.getElementById('transit-to').value.trim();
+  const resultsEl = document.getElementById('transit-results');
+
+  if (!from || !to) {
+    resultsEl.innerHTML = '<div style="color:#ff6b6b;font-size:13px;text-align:center;padding:24px 0;">Please enter both origin and destination.</div>';
+    return;
+  }
+
+  resultsEl.innerHTML = '<div style="color:#7c7c8a;font-size:13px;text-align:center;padding:24px 0;">Searching routes…</div>';
+
+  try {
+    const res = await fetch(`/api/transit?origin=${encodeURIComponent(from)}&destination=${encodeURIComponent(to)}&mode=${transitMode}`);
+    const data = await res.json();
+
+    if (data.error) {
+      resultsEl.innerHTML = `<div style="color:#ff6b6b;font-size:13px;text-align:center;padding:24px 0;">${data.error}</div>`;
+      return;
+    }
+
+    if (!data.routes || data.routes.length === 0) {
+      resultsEl.innerHTML = '<div style="color:#7c7c8a;font-size:13px;text-align:center;padding:24px 0;">No routes found for this combination.</div>';
+      return;
+    }
+
+    resultsEl.innerHTML = data.routes.map((route, i) => `
+      <div style="border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:#1e1e23;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-size:13px;font-weight:600;color:#e8e8ec;">Option ${i + 1}</span>
+          <span style="font-size:12px;color:#5b8dff;font-weight:600;">${route.duration_label} · ${route.distance_mi} mi</span>
+        </div>
+        ${route.steps.map(step => `
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+            <span style="font-size:11px;background:rgba(91,141,255,0.15);color:#5b8dff;padding:2px 8px;border-radius:4px;white-space:nowrap;">${step.line || step.vehicle}</span>
+            <span style="font-size:11px;color:#7c7c8a;">${step.departure_stop} → ${step.arrival_stop}</span>
+            ${step.departure_time ? `<span style="font-size:11px;color:#e8e8ec;margin-left:auto;">${step.departure_time} – ${step.arrival_time}</span>` : ''}
+          </div>
+        `).join('')}
+        ${route.steps.length === 0 ? `<div style="font-size:11px;color:#7c7c8a;">Route details unavailable</div>` : ''}
+      </div>
+    `).join('');
+
+  } catch(e) {
+    resultsEl.innerHTML = '<div style="color:#ff6b6b;font-size:13px;text-align:center;padding:24px 0;">Something went wrong. Try again.</div>';
+  }
+}
+
 // ---- Init ----
 setEmptyState();
 pollLatest();
 setInterval(pollLatest, 3000);
+updateHeaderLocation();
+loadWeather();
+</script>
+<!-- ─── CHATBOT ────────────────────────────────── -->
+<script>
+let chatOpen = false;
+let chatHistory = [];
+
+function toggleChat() {
+  chatOpen = !chatOpen;
+  const panel = document.getElementById('chat-panel');
+  panel.style.display = chatOpen ? 'flex' : 'none';
+
+  // Show greeting only on first open
+  if (chatOpen && chatHistory.length === 0) {
+    appendMessage('assistant', "Hi! I'm Wayfinder's travel assistant. I can help you understand your itinerary, suggest changes, or answer questions about your destination. How can I help?");
+  }
+}
+
+function appendMessage(role, text) {
+  const el = document.createElement('div');
+  el.style.cssText = `
+    padding:10px 13px;border-radius:10px;font-size:13px;line-height:1.5;max-width:88%;
+    ${role === 'user'
+      ? 'background:#5b8dff;color:#fff;align-self:flex-end;'
+      : 'background:#1e1e23;color:#e8e8ec;align-self:flex-start;border:1px solid rgba(255,255,255,0.07);'}
+  `;
+  el.textContent = text;
+  document.getElementById('chat-messages').appendChild(el);
+  document.getElementById('chat-messages').scrollTop = 999999;
+}
+
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+
+  appendMessage('user', text);
+  chatHistory.push({ role: 'user', content: text });
+
+  // Get current plan context
+  let planContext = '';
+  try {
+    const res = await fetch('/api/latest');
+    const data = await res.json();
+    if (data?.latest?.plan?.plan_json) {
+      planContext = data.latest.plan.plan_json;
+    }
+  } catch(e) {}
+
+  appendMessage('assistant', '…');
+  const msgs = document.getElementById('chat-messages');
+  const thinking = msgs.lastChild;
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: chatHistory, plan_context: planContext })
+    });
+    const data = await res.json();
+    thinking.textContent = data.reply;
+    chatHistory.push({ role: 'assistant', content: data.reply });
+  } catch(e) {
+    thinking.textContent = 'Something went wrong. Try again.';
+  }
+}
 </script>
 </body>
 </html>
