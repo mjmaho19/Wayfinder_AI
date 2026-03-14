@@ -615,6 +615,47 @@ def dashboard():
     return render_template("wayfinder_dashboard.html")
 
 
+@app.route("/api/weather", methods=["GET"])
+def weather():
+    import requests as req
+
+    latest = WayfinderSubmission.query.order_by(
+        WayfinderSubmission.created_at.desc()
+    ).first()
+    destination = latest.desired_destination if latest and latest.desired_destination else None
+
+    if destination:
+        geo = req.get(
+            "https://geocoding-api.open-meteo.com/v1/search",
+            params={"name": destination, "count": 1}, timeout=10
+        ).json()
+        if geo.get("results"):
+            r = geo["results"][0]
+            lat, lon = r["latitude"], r["longitude"]
+            resolved = destination
+        else:
+            # Geocoding failed, fall back to NYC
+            lat, lon, resolved = 40.7128, -74.0060, "New York"
+    else:
+        lat, lon, resolved = 40.7128, -74.0060, "New York"
+
+    weather_data = req.get(
+        "https://api.open-meteo.com/v1/forecast",
+        params={
+            "latitude": lat, "longitude": lon,
+            "current": "temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m",
+            "daily": "weather_code,temperature_2m_max,temperature_2m_min",
+            "forecast_days": 7,
+            "timezone": "auto",
+        }, timeout=10
+    ).json()
+
+    return jsonify({
+        "location": resolved,
+        "current": weather_data.get("current", {}),
+        "daily": weather_data.get("daily", {}),
+    })
+
 @app.route("/api/chat", methods=["POST"])
 def chat():
     from agents.chat_agent import chat_with_plan
@@ -894,6 +935,15 @@ def api_latest():
         }
     )
 
+@app.route("/api/transit", methods=["GET"])
+def transit():
+    from tools.transit_tool import search
+    origin = request.args.get("origin", "")
+    destination = request.args.get("destination", "")
+    mode = request.args.get("mode", "BUS")
+    if not origin or not destination:
+        return jsonify({"error": "origin and destination are required", "routes": []})
+    return jsonify(search(origin, destination, mode))
 
 if __name__ == "__main__":
     app.run(debug=True)
