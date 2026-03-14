@@ -5,11 +5,14 @@ from __future__ import annotations
 from datetime import datetime
 import os
 import json
+import re
 
 from dotenv import load_dotenv
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+
+from utils.plan_utils import _safe_json_loads, _canonical_item_type, _sort_place_candidates
 
 load_dotenv()
 
@@ -109,6 +112,7 @@ class TripPlan(db.Model):
 
     submission = db.relationship("WayfinderSubmission", backref=db.backref("trip_plan", uselist=False))
 
+
 class PlanEdit(db.Model):
     __tablename__ = "plan_edit"
 
@@ -127,6 +131,406 @@ class PlanEdit(db.Model):
     edit_json = db.Column(db.Text, nullable=True)
 
     submission = db.relationship("WayfinderSubmission", backref=db.backref("plan_edits", lazy=True))
+
+
+def _canonicalize_plan_item_types(plan: dict | None) -> dict | None:
+    if not isinstance(plan, dict):
+        return plan
+
+    updated = dict(plan)
+    itinerary = []
+
+    for day in updated.get("curated_itinerary", []) or []:
+        if not isinstance(day, dict):
+            itinerary.append(day)
+            continue
+
+        d = dict(day)
+
+        lodging = dict(d.get("lodging") or {})
+        if lodging:
+            lodging["type"] = "hotel"
+            d["lodging"] = lodging
+
+        meals = dict(d.get("meals") or {})
+        for slot in ["breakfast", "lunch", "dinner"]:
+            meal = dict(meals.get(slot) or {})
+            if meal:
+                meal["type"] = "restaurant"
+                meals[slot] = meal
+        d["meals"] = meals
+
+        activities = []
+        for act in d.get("activities", []) or []:
+            a = dict(act or {})
+            if a:
+                a["type"] = "poi"
+            activities.append(a)
+        d["activities"] = activities
+
+        itinerary.append(d)
+
+    updated["curated_itinerary"] = itinerary
+    if updated.get("itinerary"):
+        updated["itinerary"] = itinerary
+
+    return updated
+
+
+def _clean_destination_text(value: str | None) -> str | None:
+    if not value:
+        return value
+
+    d = value.strip()
+
+    d = re.sub(r"^[Aa]\s+trip\s+to\s+", "", d, flags=re.IGNORECASE)
+    d = re.sub(r"^[Tt]rip\s+to\s+", "", d, flags=re.IGNORECASE)
+    d = re.sub(r"^[Tt]o\s+", "", d, flags=re.IGNORECASE)
+    d = re.sub(r"\?+$", "", d)
+    d = re.sub(r"\.+$", "", d)
+    d = re.sub(r"\s+instead$", "", d, flags=re.IGNORECASE)
+    d = d.strip()
+
+    return d or None
+
+
+def _get_current_slot_item(day_plan: dict, slot: str) -> dict:
+    if not isinstance(day_plan, dict):
+        return {"name": "", "type": ""}
+
+    if slot == "lodging":
+        item = day_plan.get("lodging") or {}
+        return {
+            "name": item.get("name") or "",
+            "type": item.get("type") or "hotel",
+        }
+
+    if slot in {"breakfast", "lunch", "dinner"}:
+        item = ((day_plan.get("meals") or {}).get(slot) or {})
+        return {
+            "name": item.get("name") or "",
+            "type": item.get("type") or "restaurant",
+        }
+
+    if slot == "activity_1":
+        acts = day_plan.get("activities") or []
+        item = acts[0] if len(acts) > 0 and isinstance(acts[0], dict) else {}
+        return {
+            "name": item.get("name") or "",
+            "type": item.get("type") or "poi",
+        }
+
+    if slot == "activity_2":
+        acts = day_plan.get("activities") or []
+        item = acts[1] if len(acts) > 1 and isinstance(acts[1], dict) else {}
+        return {
+            "name": item.get("name") or "",
+            "type": item.get("type") or "poi",
+        }
+
+    return {"name": "", "type": ""}
+
+
+def _normalize_plan(plan_dict: dict | None) -> dict | None:
+    if not isinstance(plan_dict, dict):
+        return None
+
+    plan = dict(plan_dict)
+
+    if not plan.get("itinerary") and plan.get("curated_itinerary"):
+        plan["itinerary"] = plan["curated_itinerary"]
+
+    if not plan.get("curated_itinerary") and plan.get("itinerary"):
+        plan["curated_itinerary"] = plan["itinerary"]
+
+    if not isinstance(plan.get("curated_itinerary"), list):
+        plan["curated_itinerary"] = []
+
+    if not isinstance(plan.get("sections"), dict):
+        plan["sections"] = {}
+
+    plan = _canonicalize_plan_item_types(plan)
+    return plan
+
+
+def _extract_day_number(user_message: str) -> int | None:
+    m = re.search(r"\bday\s+(\d+)\b", user_message, flags=re.IGNORECASE)
+    if not m:
+        return None
+    try:
+        return int(m.group(1))
+    except Exception:
+        return None
+
+
+def _detect_specific_edit_request(user_message: str) -> dict | None:
+    text = (user_message or "").strip().lower()
+    if not text:
+        return None
+
+    edit_words = ["change", "swap", "replace", "different", "instead", "another"]
+    if not any(word in text for word in edit_words):
+        return None
+
+    day = _extract_day_number(text)
+    if day is None:
+        return None
+
+    if "hotel" in text or "lodging" in text or "stay" in text:
+        return {
+            "intent": "specific_itinerary_edit",
+            "day": day,
+            "slot": "lodging",
+            "item_type": "hotel",
+            "user_request": user_message,
+        }
+
+    for meal_slot in ["breakfast", "lunch", "dinner"]:
+        if meal_slot in text:
+            return {
+                "intent": "specific_itinerary_edit",
+                "day": day,
+                "slot": meal_slot,
+                "item_type": "restaurant",
+                "user_request": user_message,
+            }
+
+    if "activity 1" in text or "first activity" in text:
+        return {
+            "intent": "specific_itinerary_edit",
+            "day": day,
+            "slot": "activity_1",
+            "item_type": "poi",
+            "user_request": user_message,
+        }
+
+    if "activity 2" in text or "second activity" in text:
+        return {
+            "intent": "specific_itinerary_edit",
+            "day": day,
+            "slot": "activity_2",
+            "item_type": "poi",
+            "user_request": user_message,
+        }
+
+    if "activity" in text or "attraction" in text or "museum" in text or "place" in text:
+        return {
+            "intent": "specific_itinerary_edit",
+            "day": day,
+            "slot": "activity_1",
+            "item_type": "poi",
+            "user_request": user_message,
+        }
+
+    return None
+
+
+def _candidate_matches_user_request(item: dict, user_message: str) -> bool:
+    text = (user_message or "").lower()
+
+    haystack_parts = [
+        item.get("name") or "",
+        item.get("primary_type") or "",
+        item.get("editorial_summary") or "",
+        item.get("address") or "",
+        " ".join(item.get("types") or []),
+        item.get("price_level") or "",
+    ]
+    haystack = " ".join(str(x).lower() for x in haystack_parts if x)
+
+    soft_keywords = [
+        "italian", "southern", "seafood", "steak", "museum", "park", "casino",
+        "fancy", "luxury", "cheap", "budget", "upscale", "romantic"
+    ]
+    requested = [k for k in soft_keywords if k in text]
+    if not requested:
+        return True
+
+    return any(k in haystack for k in requested)
+
+
+def _get_candidate_places(plan: dict, edit_request: dict, limit: int = 8) -> list[dict]:
+    sections = plan.get("sections") or {}
+    places = sections.get("places") or {}
+    items = places.get("items") or []
+
+    wanted_type = _canonical_item_type(edit_request.get("item_type"))
+    user_message = edit_request.get("user_request") or ""
+
+    day_number = edit_request.get("day")
+    slot = edit_request.get("slot") or ""
+    day_plan = _get_day_plan(plan, day_number) if isinstance(day_number, int) else None
+    current_item = _get_current_slot_item(day_plan or {}, slot)
+    current_name = (current_item.get("name") or "").strip()
+
+    filtered = []
+    for item in items:
+        item_name = (item.get("name") or "").strip()
+
+        if _canonical_item_type(item.get("type")) != wanted_type:
+            continue
+        if not item_name:
+            continue
+        if current_name and item_name == current_name:
+            continue
+        if not _candidate_matches_user_request(item, user_message):
+            continue
+
+        filtered.append(item)
+
+    if not filtered:
+        filtered = [
+            item for item in items
+            if _canonical_item_type(item.get("type")) == wanted_type
+            and (item.get("name") or "").strip()
+            and ((item.get("name") or "").strip() != current_name if current_name else True)
+        ]
+
+    filtered = sorted(filtered, key=_sort_place_candidates)
+
+    compact = []
+    for item in filtered[:limit]:
+        compact.append({
+            "name": item.get("name"),
+            "type": item.get("type"),
+            "rating": item.get("rating"),
+            "user_rating_count": item.get("user_rating_count"),
+            "price_level": item.get("price_level"),
+            "distance_mi": item.get("distance_mi"),
+            "primary_type": item.get("primary_type"),
+        })
+    return compact
+
+
+def _get_day_plan(plan: dict, day_number: int) -> dict | None:
+    for day in plan.get("curated_itinerary", []):
+        if day.get("day") == day_number:
+            return day
+    return None
+
+
+def _build_general_chat_context(plan: dict) -> dict:
+    return {
+        "trip": plan.get("trip"),
+        "preference_profile": plan.get("preference_profile"),
+        "highlights": plan.get("highlights"),
+        "warnings": plan.get("warnings"),
+        "curated_itinerary": plan.get("curated_itinerary"),
+    }
+
+
+def _build_specific_edit_context(plan: dict, edit_request: dict) -> dict:
+    day_number = edit_request["day"]
+    day_plan = _get_day_plan(plan, day_number)
+    current_item = _get_current_slot_item(day_plan or {}, edit_request.get("slot") or "")
+    old_name = (current_item.get("name") or "").strip()
+    candidates = _get_candidate_places(plan, edit_request, limit=8)
+
+    return {
+        "trip": plan.get("trip"),
+        "preference_profile": plan.get("preference_profile"),
+        "requested_edit": {
+            **edit_request,
+            "old_name": old_name,
+        },
+        "target": {
+            "day": day_number,
+            "slot": edit_request.get("slot"),
+            "item_type": edit_request.get("item_type"),
+            "current_item": current_item,
+        },
+        "current_day_plan": day_plan,
+        "candidate_places": candidates,
+    }
+
+def _validate_proposed_edit(plan: dict, proposed_edit: dict) -> tuple[bool, str]:
+    if not isinstance(proposed_edit, dict):
+        return False, "Invalid proposed edit payload."
+
+    day = proposed_edit.get("day")
+    slot = proposed_edit.get("slot")
+    item_type = _canonical_item_type(proposed_edit.get("item_type"))
+    replace_with = (proposed_edit.get("replace_with") or "").strip()
+
+    if not isinstance(day, int):
+        return False, "Missing or invalid day."
+    if slot not in {"lodging", "breakfast", "lunch", "dinner", "activity_1", "activity_2"}:
+        return False, "Invalid slot."
+    if item_type not in {"hotel", "restaurant", "poi"}:
+        return False, "Invalid item type."
+    if not replace_with:
+        return False, "No replacement was chosen."
+
+    day_plan = _get_day_plan(plan, day)
+    if not day_plan:
+        return False, f"Day {day} not found in itinerary."
+
+    current_item = _get_current_slot_item(day_plan, slot)
+    current_name = (current_item.get("name") or "").strip()
+
+    if current_name and replace_with == current_name:
+        return False, "Replacement must be different from the current item."
+
+    sections = plan.get("sections") or {}
+    places = sections.get("places") or {}
+    items = places.get("items") or []
+
+    wanted_type = _canonical_item_type(item_type)
+
+    allowed_names = {
+        (item.get("name") or "").strip()
+        for item in items
+        if _canonical_item_type(item.get("type")) == wanted_type and item.get("name")
+    }
+
+    if replace_with not in allowed_names:
+        return False, "Replacement is not grounded in allowed places."
+
+    return True, ""
+
+
+def _apply_specific_edit_to_plan(plan: dict, proposed_edit: dict) -> dict:
+    updated = dict(plan)
+    itinerary = [dict(day) for day in (updated.get("curated_itinerary") or [])]
+
+    day = proposed_edit["day"]
+    slot = proposed_edit["slot"]
+    item_type = _canonical_item_type(proposed_edit["item_type"])
+    replace_with = proposed_edit["replace_with"]
+
+    for idx, day_plan in enumerate(itinerary):
+        if day_plan.get("day") != day:
+            continue
+
+        day_copy = dict(day_plan)
+
+        if slot == "lodging":
+            day_copy["lodging"] = {"name": replace_with, "type": item_type}
+
+        elif slot in {"breakfast", "lunch", "dinner"}:
+            meals = dict(day_copy.get("meals") or {})
+            meals[slot] = {"name": replace_with, "type": item_type}
+            day_copy["meals"] = meals
+
+        elif slot in {"activity_1", "activity_2"}:
+            acts = list(day_copy.get("activities") or [])
+            target_index = 0 if slot == "activity_1" else 1
+            while len(acts) <= target_index:
+                acts.append({"name": "", "type": "poi"})
+            acts[target_index] = {"name": replace_with, "type": item_type}
+            day_copy["activities"] = acts
+
+        itinerary[idx] = day_copy
+        break
+
+    updated["curated_itinerary"] = itinerary
+    updated["itinerary"] = itinerary
+
+    warnings = list(updated.get("warnings") or [])
+    warnings.append(f"Chat edit applied: day {day} {slot} -> {replace_with}")
+    updated["warnings"] = warnings
+
+    return updated
 
 
 # App routes
@@ -210,6 +614,7 @@ def dashboard():
     """Render the Wayfinder dashboard."""
     return render_template("wayfinder_dashboard.html")
 
+
 @app.route("/api/chat", methods=["POST"])
 def chat():
     from agents.chat_agent import chat_with_plan
@@ -219,9 +624,11 @@ def chat():
     plan_context = data.get("plan_context", "") or ""
     submission_id = data.get("submission_id")
 
-    # Option C controls:
     apply_changes = bool(data.get("apply_changes", False))
-    edit = data.get("edit") or {}  # dict of fields to apply if confirmed
+    edit = data.get("edit") or {}
+
+    apply_specific_edit = bool(data.get("apply_specific_edit", False))
+    proposed_edit = data.get("proposed_edit") or {}
 
     if not submission_id:
         latest = WayfinderSubmission.query.order_by(WayfinderSubmission.created_at.desc()).first()
@@ -233,7 +640,6 @@ def chat():
     if not submission:
         return jsonify({"reply": f"Submission {submission_id} not found."}), 404
 
-    # find last user msg (for logging/audit)
     user_last = None
     for m in reversed(messages):
         if m.get("role") == "user":
@@ -241,10 +647,191 @@ def chat():
             break
     user_last = user_last or "User sent an empty message."
 
-    # Normal chat reply (LLM)
-    reply = chat_with_plan(messages, plan_context)
+    trip_plan_row = TripPlan.query.filter_by(submission_id=submission.id).first()
 
-    # Always persist the chat turn as a PlanEdit record (audit trail)
+    plan_dict = None
+    if trip_plan_row and trip_plan_row.plan_json:
+        plan_dict = _safe_json_loads(trip_plan_row.plan_json)
+    if not plan_dict and plan_context:
+        plan_dict = _safe_json_loads(plan_context)
+
+    plan_dict = _normalize_plan(plan_dict)
+
+    if apply_changes:
+        cleaned_destination = _clean_destination_text(edit.get("desired_destination"))
+
+        new = WayfinderSubmission(
+            traveler_name=edit.get("traveler_name") or submission.traveler_name,
+            email=edit.get("email") or submission.email,
+
+            origin=edit.get("origin") or submission.origin,
+            desired_destination=cleaned_destination or submission.desired_destination,
+            travel_dates=edit.get("travel_dates") or submission.travel_dates,
+            budget=edit.get("budget") or submission.budget,
+
+            preferences=edit.get("preferences") or submission.preferences,
+
+            raw_request=(
+                (edit.get("raw_request") or submission.raw_request or "")
+                + f"\n\n[Chat edit confirmed] {user_last}"
+            ),
+
+            status="pending",
+            agent_result=None,
+        )
+        db.session.add(new)
+        db.session.commit()
+
+        pe = PlanEdit(
+            submission_id=submission.id,
+            source="chat",
+            status="applied",
+            user_message=user_last,
+            assistant_reply="Confirmed. I’m updating the trip and rebuilding the plan.",
+            edit_json=json.dumps({**edit, "new_submission_id": new.id}) if edit else json.dumps({"new_submission_id": new.id}),
+        )
+        db.session.add(pe)
+        db.session.commit()
+
+        for t in ["weather", "places", "transit", "supervisor_update"]:
+            db.session.add(
+                AgentTask(
+                    submission_id=new.id,
+                    task_type=t,
+                    status="pending",
+                    input_json=None,
+                    attempts=0,
+                    max_attempts=3,
+                )
+            )
+        db.session.commit()
+
+        return jsonify({
+            "reply": "Confirmed. I’m updating the trip and rebuilding the plan.",
+            "apply_changes": True,
+            "plan_edit_id": pe.id,
+            "new_submission_id": new.id,
+            "queued_pipeline": True,
+        })
+
+    if apply_specific_edit and plan_dict and proposed_edit:
+        ok, error_msg = _validate_proposed_edit(plan_dict, proposed_edit)
+        if not ok:
+            return jsonify({
+                "reply": f"I couldn't apply that change automatically: {error_msg}",
+                "apply_changes": False,
+                "applied_specific_edit": False,
+                "queued_supervisor_update": False,
+            })
+
+        updated_plan = _apply_specific_edit_to_plan(plan_dict, proposed_edit)
+
+        if trip_plan_row:
+            trip_plan_row.plan_json = json.dumps(updated_plan, ensure_ascii=False)
+            if updated_plan.get("summary"):
+                trip_plan_row.summary = updated_plan.get("summary") or trip_plan_row.summary
+        else:
+            trip_plan_row = TripPlan(
+                submission_id=submission.id,
+                plan_json=json.dumps(updated_plan, ensure_ascii=False),
+                summary=None,
+            )
+            db.session.add(trip_plan_row)
+
+        pe = PlanEdit(
+            submission_id=submission.id,
+            source="chat",
+            status="applied",
+            user_message=user_last,
+            assistant_reply=(
+                f"Done — day {proposed_edit['day']} {proposed_edit['slot']} "
+                f"has been changed to {proposed_edit['replace_with']}."
+            ),
+            edit_json=json.dumps(proposed_edit),
+        )
+        db.session.add(pe)
+        db.session.commit()
+
+        return jsonify({
+            "reply": pe.assistant_reply,
+            "apply_changes": False,
+            "applied_specific_edit": True,
+            "plan_edit_id": pe.id,
+            "queued_supervisor_update": False,
+        })
+
+    specific_edit_request = _detect_specific_edit_request(user_last)
+
+    if plan_dict and specific_edit_request:
+        compact_context = _build_specific_edit_context(plan_dict, specific_edit_request)
+
+        chat_result = chat_with_plan(
+            messages=messages,
+            plan_context=json.dumps(compact_context, ensure_ascii=False),
+            structured_edit=True,
+        )
+
+        reply = chat_result.get("reply") or "I found an itinerary update."
+        proposed_edit = chat_result.get("proposed_edit")
+
+        pe = PlanEdit(
+            submission_id=submission.id,
+            source="chat",
+            status="pending",
+            user_message=user_last,
+            assistant_reply=reply,
+            edit_json=json.dumps(proposed_edit) if proposed_edit else None,
+        )
+        db.session.add(pe)
+        db.session.commit()
+
+        if proposed_edit:
+            ok, error_msg = _validate_proposed_edit(plan_dict, proposed_edit)
+            if not ok:
+                pe.status = "failed"
+                pe.assistant_reply = f"{reply} I couldn't validate that change automatically: {error_msg}"
+                db.session.commit()
+
+                return jsonify({
+                    "reply": pe.assistant_reply,
+                    "apply_changes": False,
+                    "applied_specific_edit": False,
+                    "plan_edit_id": pe.id,
+                    "queued_supervisor_update": False,
+                    "proposed_edit": None,
+                })
+
+            return jsonify({
+                "reply": reply,
+                "apply_changes": False,
+                "applied_specific_edit": False,
+                "plan_edit_id": pe.id,
+                "queued_supervisor_update": False,
+                "proposed_edit": proposed_edit,
+            })
+
+        return jsonify({
+            "reply": reply,
+            "apply_changes": False,
+            "applied_specific_edit": False,
+            "plan_edit_id": pe.id,
+            "queued_supervisor_update": False,
+            "proposed_edit": None,
+        })
+
+    if plan_dict:
+        compact_context = _build_general_chat_context(plan_dict)
+        final_plan_context = json.dumps(compact_context, ensure_ascii=False)
+    else:
+        final_plan_context = ""
+
+    chat_result = chat_with_plan(
+        messages=messages,
+        plan_context=final_plan_context,
+        structured_edit=False,
+    )
+    reply = chat_result.get("reply") or "I can help with your trip."
+
     pe = PlanEdit(
         submission_id=submission.id,
         source="chat",
@@ -256,98 +843,14 @@ def chat():
     db.session.add(pe)
     db.session.commit()
 
-    # -----------------------------
-    # OPTION C: if user confirmed a major change, create a NEW submission
-    # -----------------------------
-    new_submission_id = None
-    queued = False
-
-    if apply_changes:
-        # Build the new submission by copying old fields + applying overrides
-        new = WayfinderSubmission(
-            traveler_name=edit.get("traveler_name") or submission.traveler_name,
-            email=edit.get("email") or submission.email,
-
-            origin=edit.get("origin") or submission.origin,
-            desired_destination=edit.get("desired_destination") or submission.desired_destination,
-            travel_dates=edit.get("travel_dates") or submission.travel_dates,
-            budget=edit.get("budget") or submission.budget,
-
-            preferences=edit.get("preferences") or submission.preferences,
-
-            # Keep an audit-friendly raw_request trail
-            raw_request=(
-                (edit.get("raw_request") or submission.raw_request or "")
-                + f"\n\n[Chat edit confirmed] {user_last}"
-            ),
-
-            status="pending",
-            agent_result=None,
-        )
-        db.session.add(new)
-        db.session.commit()
-        new_submission_id = new.id
-
-        # Optional: link this plan edit to the new submission (if you add this column later)
-        # For now, we can just mark the plan edit as "applied" and store the new id in edit_json.
-        pe.status = "applied"
-        if edit:
-            edit_with_link = dict(edit)
-            edit_with_link["new_submission_id"] = new_submission_id
-            pe.edit_json = json.dumps(edit_with_link)
-        else:
-            pe.edit_json = json.dumps({"new_submission_id": new_submission_id})
-        db.session.commit()
-
-        # Seed a fresh pipeline for the new submission
-        for t in ["weather", "places", "transit", "supervisor_update"]:
-            db.session.add(
-                AgentTask(
-                    submission_id=new_submission_id,
-                    task_type=t,
-                    status="pending",
-                    input_json=None,
-                    attempts=0,
-                    max_attempts=3,
-                )
-            )
-        db.session.commit()
-        queued = True
-
-        return jsonify({
-            "reply": reply,
-            "apply_changes": True,
-            "plan_edit_id": pe.id,
-            "new_submission_id": new_submission_id,
-            "queued_pipeline": queued,
-        })
-
-    # -----------------------------
-    # Default behavior (no confirmed changes):
-    # just queue supervisor_update for SAME submission (your existing behavior)
-    # -----------------------------
-    db.session.add(
-        AgentTask(
-            submission_id=submission.id,
-            task_type="supervisor_update",
-            status="pending",
-            input_json=json.dumps({"reason": "plan_edit", "plan_edit_id": pe.id}),
-            attempts=0,
-            max_attempts=3,
-        )
-    )
-    db.session.commit()
-    queued = True
-
     return jsonify({
         "reply": reply,
         "apply_changes": False,
-        "queued_supervisor_update": queued,
+        "queued_supervisor_update": True,
         "plan_edit_id": pe.id,
     })
 
 
-# helps with the dashboard JS later
 @app.route("/api/latest", methods=["GET"])
 def api_latest():
     latest = WayfinderSubmission.query.order_by(WayfinderSubmission.created_at.desc()).first()

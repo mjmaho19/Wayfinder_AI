@@ -494,6 +494,11 @@
 let chatOpen = false;
 let chatHistory = [];
 
+let activeSubmissionId = null;
+let pendingEdit = null; // major trip rebuild edits
+
+let pendingProposedEdit = null; // specific itinerary edit from backend
+
 /**
  * Option C support:
  * - Keep an active submission id for the chat session
@@ -501,8 +506,6 @@ let chatHistory = [];
  * - On confirm, POST /api/chat with apply_changes + edit object
  * - If backend returns new_submission_id, switch the active submission id
  */
-let activeSubmissionId = null;
-let pendingEdit = null; // { desired_destination: "Los Angeles", ... }
 
 function toggleChat() {
   chatOpen = !chatOpen;
@@ -524,8 +527,20 @@ function appendMessage(role, text) {
 }
 
 function isConfirmMessage(text) {
-  const t = (text || "").trim().toLowerCase();
-  return t === "confirm" || t === "yes" || t === "apply" || t === "confirm apply";
+  const t = (text || "").toLowerCase();
+
+  const keywords = [
+    "confirm",
+    "apply",
+    "go ahead",
+    "do it",
+    "make the change",
+    "sounds good",
+    "that works",
+    "yes"
+  ];
+
+  return keywords.some(k => t.includes(k));
 }
 
 /**
@@ -535,6 +550,21 @@ function isConfirmMessage(text) {
  * - "change destination to LA"
  * - "can I change my trip to Los Angeles?"
  */
+
+ function cleanDestinationText(dest) {
+  let d = (dest || "").trim();
+
+  d = d.replace(/^[Aa]\s+trip\s+to\s+/i, "");
+  d = d.replace(/^[Tt]rip\s+to\s+/i, "");
+  d = d.replace(/^[Tt]o\s+/i, "");
+  d = d.replace(/\?+$/g, "");
+  d = d.replace(/\.+$/g, "");
+  d = d.replace(/\s+instead$/i, "");
+  d = d.trim();
+
+  return d;
+}
+
 function extractMajorEdit(text) {
   const t = (text || "").trim();
 
@@ -548,7 +578,8 @@ function extractMajorEdit(text) {
   for (const re of patterns) {
     const m = t.match(re);
     if (m) {
-      const dest = (m[m.length - 1] || "").trim();
+      const rawDest = (m[m.length - 1] || "").trim();
+      const dest = cleanDestinationText(rawDest);
       if (dest.length >= 2) return { desired_destination: dest };
     }
   }
@@ -628,21 +659,28 @@ async function sendChat() {
     const dest = pendingEdit.desired_destination || "that destination";
     const confirmMsg =
       `Got it — you want to change your trip to ${dest}.\n\n` +
-      `Type "confirm" to apply this change (this will create a new trip submission and refresh the dashboard).`;
+      `Type "confirm" to apply this change.`;
 
     thinking.textContent = confirmMsg;
     chatHistory.push({ role: 'assistant', content: confirmMsg });
     return;
   }
 
-  // If user confirms and we have a pending edit, apply it via backend
-  const applying = isConfirmMessage(text) && pendingEdit;
+  const confirming = isConfirmMessage(text);
+
+  const applyingSpecificEdit = confirming && pendingProposedEdit;
+  const applyingMajorEdit = confirming && !pendingProposedEdit && pendingEdit;
 
   const payload = {
     submission_id: activeSubmissionId,
     messages: chatHistory,
     plan_context: planContext,
-    ...(applying ? { apply_changes: true, edit: pendingEdit } : {})
+    ...(applyingSpecificEdit
+      ? { apply_specific_edit: true, proposed_edit: pendingProposedEdit }
+      : {}),
+    ...(applyingMajorEdit
+      ? { apply_changes: true, edit: pendingEdit }
+      : {})
   };
 
   console.log("POST /api/chat payload:", payload);
@@ -675,17 +713,29 @@ async function sendChat() {
     thinking.textContent = reply;
     chatHistory.push({ role: 'assistant', content: reply });
 
+    if (chatJson?.proposed_edit) {
+      pendingProposedEdit = chatJson.proposed_edit;
+    }
+
+    if (chatJson?.applied_specific_edit) {
+      pendingProposedEdit = null;
+      chatHistory = chatHistory.slice(-2);
+      try { pollLatest(); } catch (e) {}
+    }
+
     // If backend created a new submission, switch the active one
     if (chatJson?.new_submission_id) {
       activeSubmissionId = chatJson.new_submission_id;
       pendingEdit = null;
+      pendingProposedEdit = null;
+      chatHistory = [];
 
       // optional: clear currentType selection so the new destination starts clean
       currentType = null;
       document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
 
       // pull fresh /api/latest immediately (your interval will also catch it)
-      try { pollLatest(); } catch (e) {}
+            try { pollLatest(); } catch (e) {}
     }
 
   } catch (e) {

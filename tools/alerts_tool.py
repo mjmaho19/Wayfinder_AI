@@ -7,6 +7,8 @@ NEWS_API_KEY = os.getenv("NEWS_API_KEY")
 
 NEWS_URL = "https://newsapi.org/v2/everything"
 
+# roads closed, geoolitical, flights delayed, major weather events, violence,
+
 
 def run(submission, task_input):
     destination = submission.desired_destination

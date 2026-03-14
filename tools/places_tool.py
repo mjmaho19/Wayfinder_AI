@@ -54,6 +54,9 @@ def _search_text(query: str, center: dict[str, float] | None, max_results: int =
                 "places.formattedAddress",
                 "places.primaryType",
                 "places.types",
+                "places.priceLevel",
+                "places.userRatingCount",
+                "places.editorialSummary",
             ]
         ),
     }
@@ -81,6 +84,14 @@ def _search_text(query: str, center: dict[str, float] | None, max_results: int =
 def _to_item(p: dict[str, Any], item_type: str, center: dict[str, float] | None) -> dict[str, Any]:
     name = (p.get("displayName") or {}).get("text") or "Unknown"
     rating = p.get("rating")
+    user_rating_count = p.get("userRatingCount")
+    price_level = p.get("priceLevel")  # enum string like PRICE_LEVEL_MODERATE
+    editorial = (p.get("editorialSummary") or {}).get("text")
+
+    # NEW: classification fields (so supervisor can detect cuisine / hotel type better)
+    primary_type = p.get("primaryType")
+    types = p.get("types") or []
+    address = p.get("formattedAddress")
 
     loc = p.get("location") or {}
     lat = loc.get("latitude")
@@ -90,21 +101,23 @@ def _to_item(p: dict[str, Any], item_type: str, center: dict[str, float] | None)
     if center and isinstance(lat, (int, float)) and isinstance(lng, (int, float)):
         dist_mi = round(_haversine_miles(center["lat"], center["lng"], float(lat), float(lng)), 1)
 
-    icon_map = {
-        "restaurant": "🍽️",
-        "shop": "🛍️",
-        "hotel": "🏨",
-        "bathroom": "🚻",
-        "poi": "📍",
-    }
+    icon_map = {"restaurant":"🍽️","shop":"🛍️","hotel":"🏨","bathroom":"🚻","poi":"📍"}
 
     return {
         "name": name,
         "type": item_type,
         "rating": float(rating) if isinstance(rating, (int, float)) else None,
+        "user_rating_count": int(user_rating_count) if isinstance(user_rating_count, int) else None,
+        "price_level": price_level,
+        "editorial_summary": editorial,
+
+        # NEW:
+        "primary_type": primary_type,
+        "types": types[:10] if isinstance(types, list) else [],
+        "address": address,
+
         "distance_mi": dist_mi,
         "icon": icon_map.get(item_type, "📍"),
-        # keep coordinates for pins (your dashboard supports x/y, but we can add lat/lng later)
         "lat": float(lat) if isinstance(lat, (int, float)) else None,
         "lng": float(lng) if isinstance(lng, (int, float)) else None,
     }
