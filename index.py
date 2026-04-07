@@ -576,7 +576,7 @@ def request_trip():
         db.session.add(submission)
         db.session.commit()
 
-        starter_tasks = ["weather", "places", "transit"]
+        starter_tasks = ["weather", "places", "transit", "alerts"]
         for t in starter_tasks:
             db.session.add(
                 AgentTask(
@@ -734,7 +734,7 @@ def chat():
         db.session.add(pe)
         db.session.commit()
 
-        for t in ["weather", "places", "transit", "supervisor_update"]:
+        for t in ["weather", "places", "transit", "alerts", "supervisor_update"]:
             db.session.add(
                 AgentTask(
                     submission_id=new.id,

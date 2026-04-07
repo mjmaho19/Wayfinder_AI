@@ -17,6 +17,8 @@ from agents.supervisor import run_supervisor
 from tools.weather_tool import run as run_weather
 from tools.places_tool import run as run_places
 from tools.transit_tool import run as run_transit
+from tools.alerts_tool import run as run_alerts
+from tools.email_alert_tool import run as run_email_alert
 
 
 POLL_SECONDS = float(os.getenv("WAYFINDER_WORKER_POLL_SECONDS", "2.0"))
@@ -26,6 +28,8 @@ TOOL_RUNNERS = {
     "weather": run_weather,
     "places": run_places,
     "transit": run_transit,
+    "alerts": run_alerts,
+    "email_alert": run_email_alert,
 }
 
 
@@ -112,6 +116,53 @@ def _mark_completed(task: AgentTask) -> None:
     db.session.commit()
 
 
+def _load_tool_payloads(submission_id: int, tool_name: str) -> list[dict]:
+    rows = (
+        ToolResult.query.filter_by(submission_id=submission_id, tool_name=tool_name)
+        .order_by(ToolResult.created_at.asc())
+        .all()
+    )
+
+    payloads = []
+    for row in rows:
+        try:
+            payloads.append(json.loads(row.result_json))
+        except Exception:
+            continue
+    return payloads
+
+
+def _extract_new_alerts_for_email(submission_id: int, alert_payload: dict) -> list[dict]:
+    """
+    Temporary first-version behavior:
+    - if this submission already has any completed email_alert result, do not send again
+    - only use alerts from the current alerts payload
+    - only keep medium/high alerts
+    """
+    prior_email_results = _load_tool_payloads(submission_id, "email_alert")
+    if prior_email_results:
+        return []
+
+    alerts = alert_payload.get("alerts", []) or []
+    filtered = []
+
+    for alert in alerts:
+        if not isinstance(alert, dict):
+            continue
+
+        severity = str(alert.get("severity") or "").lower()
+        title = str(alert.get("title") or "").strip()
+
+        if severity not in {"high", "medium"}:
+            continue
+        if not title:
+            continue
+
+        filtered.append(alert)
+
+    return filtered
+
+
 def _run_tool_task(task: AgentTask) -> None:
     submission = WayfinderSubmission.query.get(task.submission_id)
     if not submission:
@@ -125,10 +176,9 @@ def _run_tool_task(task: AgentTask) -> None:
 
     task_input = _safe_load_task_input(task)
 
-    # pass task input through
     payload = runner(submission, task_input)
 
-    tool_name = task.task_type  # keep tool_name aligned with task_type for simplicity
+    tool_name = task.task_type
     result = ToolResult(
         submission_id=submission.id,
         tool_name=tool_name,
@@ -136,15 +186,44 @@ def _run_tool_task(task: AgentTask) -> None:
     )
     db.session.add(result)
 
-    # Update submission status to show progress
     if submission.status in ("pending", "processing"):
         submission.status = "processing"
 
     db.session.commit()
 
-    # After tool completes, enqueue supervisor update
-    _ensure_supervisor_task(submission.id)
+    # If alerts found anything important, queue one email notification
+    if task.task_type == "alerts":
+        new_alerts = _extract_new_alerts_for_email(submission.id, payload)
 
+        if submission.email and new_alerts:
+            exists = (
+                AgentTask.query.filter(
+                    AgentTask.submission_id == submission.id,
+                    AgentTask.task_type == "email_alert",
+                    AgentTask.status.in_(["pending", "running"]),
+                ).count()
+                > 0
+            )
+
+            if not exists:
+                db.session.add(
+                    AgentTask(
+                        submission_id=submission.id,
+                        task_type="email_alert",
+                        status="pending",
+                        input_json=json.dumps(
+                            {
+                                "email": submission.email,
+                                "alerts": new_alerts[:5],
+                            }
+                        ),
+                        attempts=0,
+                        max_attempts=3,
+                    )
+                )
+                db.session.commit()
+
+    _ensure_supervisor_task(submission.id)
     _mark_completed(task)
 
 
