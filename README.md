@@ -7,8 +7,8 @@ A lightweight Flask application that collects user submissions via a styled cont
 Current phase:
 - ✅ Contact form + styling fully functional  
 - ✅ Submissions stored temporarily in memory  
-- 🔜 Database integration (SQLite → Render Postgres)  
-- 🔜 Agentic AI processing pipeline
+- ✅ Database integration (SQLite → Render Postgres)  
+- ✅ Agentic AI processing pipeline
 
 ---
 
