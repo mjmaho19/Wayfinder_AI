@@ -1,371 +1,507 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="light">
+<html lang="en">
   <head>
     <meta charset="utf-8">
-
-    <!-- Viewport -->
     <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover">
-
-    <!-- SEO meta tags -->
     <title>Wayfinder AI</title>
-    <meta name="description" content="Around - Multipurpose Bootstrap HTML Template">
-    <meta name="keywords" content="bootstrap, business, corporate, coworking space, services, creative agency, dashboard, e-commerce, mobile app showcase, saas, multipurpose, product landing, shop, software, ui kit, web studio, landing, light and dark mode, html5, css3, javascript, gallery, slider, touch, creative">
-    <meta name="author" content="Createx Studio">
-
-    <!-- Webmanifest + Favicon / App icons -->
+    <meta name="description" content="Wayfinder – Plan your trip">
 
     <link type="image/png" sizes="48x48" rel="icon" href="https://img.icons8.com/fluency/48/test-tube.png">
     <link type="image/png" sizes="96x96" rel="icon" href="https://img.icons8.com/fluency/96/test-tube.png">
 
-    <link rel="manifest" href="../manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
 
-    <!-- Theme switcher (color modes) -->
-    <script src="../static/assets/js/theme-switcher.js"></script>
-
-    <!-- Import Google font (Inter) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" id="google-font">
-
-    <!-- Font icons -->
-    <link rel="stylesheet" href="../static/assets/icons/around-icons.min.css">
-
-    <!-- Theme styles + Bootstrap -->
-    <link rel="stylesheet" media="screen" href="../static/assets/css/theme.min.css">
-
-
-    <!-- Page loading styles -->
     <style>
-      .page-loading {
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      :root {
+        --bg:       #0f0f11;
+        --surface:  #17171a;
+        --surface2: #1e1e23;
+        --border:   rgba(255,255,255,0.07);
+        --text:     #e8e8ec;
+        --muted:    #7c7c8a;
+        --accent:   #5b8dff;
+        --accent2:  #a78bfa;
+        --green:    #34d399;
+        --amber:    #fbbf24;
+        --radius:   16px;
+        --radius-sm:10px;
+        --shadow:   0 8px 32px rgba(0,0,0,0.45);
+      }
+
+      html, body {
+        min-height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 14px;
+      }
+
+      /* ─── HEADER ─────────────────────────────── */
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 28px;
+        height: 58px;
+        background: rgba(15,15,17,0.85);
+        backdrop-filter: blur(16px);
+        border-bottom: 1px solid var(--border);
         position: fixed;
-        top: 0;
-        right: 0;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        -webkit-transition: all .4s .2s ease-in-out;
-        transition: all .4s .2s ease-in-out;
-        background-color: #fff;
-        opacity: 0;
-        visibility: hidden;
-        z-index: 9999;
+        top: 0; left: 0; right: 0;
+        z-index: 20;
       }
-      [data-bs-theme="dark"] .page-loading {
-        background-color: #121519;
+
+      .logo {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+        text-decoration: none;
       }
-      .page-loading.active {
-        opacity: 1;
-        visibility: visible;
+      .logo-word {
+        font-family: 'Instrument Serif', serif;
+        font-size: 22px;
+        letter-spacing: -0.02em;
+        color: var(--text);
       }
-      .page-loading-inner {
-        position: absolute;
-        top: 50%;
-        left: 0;
-        width: 100%;
-        text-align: center;
-        -webkit-transform: translateY(-50%);
-        transform: translateY(-50%);
-        -webkit-transition: opacity .2s ease-in-out;
-        transition: opacity .2s ease-in-out;
-        opacity: 0;
-      }
-      .page-loading.active > .page-loading-inner {
-        opacity: 1;
-      }
-      .page-loading-inner > span {
-        display: block;
-        font-family: "Inter", sans-serif;
-        font-size: 1rem;
-        font-weight: normal;
-        color: #6f788b;
-      }
-      [data-bs-theme="dark"] .page-loading-inner > span {
-        color: #fff;
-        opacity: .6;
-      }
-      .page-spinner {
-        display: inline-block;
-        width: 2.75rem;
-        height: 2.75rem;
-        margin-bottom: .75rem;
-        vertical-align: text-bottom;
-        background-color: #d7dde2;
+      .logo-dot {
+        width: 7px; height: 7px;
         border-radius: 50%;
-        opacity: 0;
-        -webkit-animation: spinner .75s linear infinite;
-        animation: spinner .75s linear infinite;
+        background: var(--accent);
+        margin-bottom: 2px;
       }
-      [data-bs-theme="dark"] .page-spinner {
-        background-color: rgba(255,255,255,.25);
+      .logo-tag {
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--muted);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-left: 4px;
       }
-      @-webkit-keyframes spinner {
-        0% {
-          -webkit-transform: scale(0);
-          transform: scale(0);
-        }
-        50% {
-          opacity: 1;
-          -webkit-transform: none;
-          transform: none;
-        }
+
+      .header-nav {
+        display: flex;
+        align-items: center;
+        gap: 4px;
       }
-      @keyframes spinner {
-        0% {
-          -webkit-transform: scale(0);
-          transform: scale(0);
-        }
-        50% {
-          opacity: 1;
-          -webkit-transform: none;
-          transform: none;
-        }
+      .nav-link {
+        color: var(--muted);
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 500;
+        padding: 6px 12px;
+        border-radius: var(--radius-sm);
+        transition: color .2s, background .2s;
+      }
+      .nav-link:hover {
+        color: var(--text);
+        background: var(--surface2);
+      }
+
+      /* ─── PAGE BODY ──────────────────────────── */
+      .page-wrapper {
+        min-height: 100vh;
+        padding-top: 58px;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* ─── HERO BAND ──────────────────────────── */
+      .hero {
+        background: linear-gradient(160deg, rgba(91,141,255,0.08) 0%, rgba(167,139,250,0.06) 60%, transparent 100%);
+        border-bottom: 1px solid var(--border);
+        padding: 56px 28px 48px;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+      }
+      .hero::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(ellipse 60% 50% at 50% 0%, rgba(91,141,255,0.12), transparent 70%);
+        pointer-events: none;
+      }
+      .hero-eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 99px;
+        padding: 5px 14px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--accent);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        margin-bottom: 20px;
+      }
+      .hero-eyebrow .dot {
+        width: 6px; height: 6px;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 0 0 6px var(--accent);
+        animation: pulse 2s infinite;
+      }
+      @keyframes pulse {
+        0%,100% { opacity: 1; }
+        50% { opacity: 0.4; }
+      }
+      .hero h1 {
+        font-family: 'Instrument Serif', serif;
+        font-size: clamp(32px, 5vw, 52px);
+        letter-spacing: -0.02em;
+        color: var(--text);
+        line-height: 1.1;
+        margin-bottom: 14px;
+      }
+      .hero p {
+        font-size: 15px;
+        color: var(--muted);
+        max-width: 460px;
+        margin: 0 auto;
+        line-height: 1.6;
+      }
+
+      /* ─── FORM SECTION ───────────────────────── */
+      .form-section {
+        flex: 1;
+        padding: 40px 20px 60px;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+      }
+
+      .form-card {
+        width: 100%;
+        max-width: 820px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+        position: relative;
+      }
+
+      /* Decorative blobs */
+      .form-card::before,
+      .form-card::after {
+        content: '';
+        position: absolute;
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 0;
+      }
+      .form-card::before {
+        width: 320px; height: 320px;
+        background: radial-gradient(circle, rgba(91,141,255,0.07), transparent 70%);
+        top: -80px; right: -80px;
+      }
+      .form-card::after {
+        width: 240px; height: 240px;
+        background: radial-gradient(circle, rgba(167,139,250,0.06), transparent 70%);
+        bottom: -60px; left: -60px;
+      }
+
+      .form-card-header {
+        padding: 28px 36px 20px;
+        border-bottom: 1px solid var(--border);
+        position: relative; z-index: 1;
+      }
+      .form-card-header h2 {
+        font-family: 'Instrument Serif', serif;
+        font-size: 26px;
+        letter-spacing: -0.01em;
+        color: var(--text);
+        margin-bottom: 4px;
+      }
+      .form-card-header p {
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .form-body {
+        padding: 28px 36px 32px;
+        position: relative; z-index: 1;
+      }
+
+      .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px 24px;
+      }
+      .form-grid .full {
+        grid-column: 1 / -1;
+      }
+
+      /* ─── FORM CONTROLS ──────────────────────── */
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+      }
+      .form-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--muted);
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+      .form-control {
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: 10px 14px;
+        color: var(--text);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 14px;
+        outline: none;
+        width: 100%;
+        transition: border-color .2s, box-shadow .2s;
+        resize: vertical;
+      }
+      .form-control::placeholder {
+        color: var(--muted);
+        opacity: 0.7;
+      }
+      .form-control:focus {
+        border-color: rgba(91,141,255,0.5);
+        box-shadow: 0 0 0 3px rgba(91,141,255,0.1);
+      }
+      textarea.form-control {
+        min-height: 96px;
+      }
+      textarea.form-control.tall {
+        min-height: 136px;
+      }
+
+      /* ─── FLASH MESSAGES ─────────────────────── */
+      .flashes {
+        grid-column: 1 / -1;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .alert {
+        padding: 10px 14px;
+        border-radius: var(--radius-sm);
+        font-size: 13px;
+        border: 1px solid var(--border);
+        background: var(--surface2);
+        color: var(--text);
+      }
+      .alert-error, .alert-danger {
+        border-color: rgba(255,107,107,0.35);
+        background: rgba(255,107,107,0.08);
+        color: #ff8080;
+      }
+      .alert-success {
+        border-color: rgba(52,211,153,0.35);
+        background: rgba(52,211,153,0.08);
+        color: #34d399;
+      }
+      .alert-warning {
+        border-color: rgba(251,191,36,0.35);
+        background: rgba(251,191,36,0.08);
+        color: #fbbf24;
+      }
+
+      /* ─── SUBMIT BUTTON ──────────────────────── */
+      .form-footer {
+        padding: 0 36px 32px;
+        display: flex;
+        justify-content: center;
+        position: relative; z-index: 1;
+      }
+      .btn-submit {
+        background: linear-gradient(135deg, var(--accent), var(--accent2));
+        border: none;
+        border-radius: var(--radius-sm);
+        padding: 13px 40px;
+        color: #fff;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        letter-spacing: 0.02em;
+        transition: opacity .2s, transform .15s, box-shadow .2s;
+        box-shadow: 0 4px 18px rgba(91,141,255,0.35);
+      }
+      .btn-submit:hover {
+        opacity: .92;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 24px rgba(91,141,255,0.45);
+      }
+      .btn-submit:active {
+        transform: translateY(0);
+      }
+
+      /* ─── RESPONSIVE ─────────────────────────── */
+      @media (max-width: 600px) {
+        .form-grid { grid-template-columns: 1fr; }
+        .form-grid .full { grid-column: 1; }
+        .form-body, .form-card-header, .form-footer { padding-left: 20px; padding-right: 20px; }
+        .hero { padding: 44px 20px 36px; }
+        .header-nav { display: none; }
       }
     </style>
-
-    <!-- Page loading scripts -->
-    <script>
-      (function () {
-        window.onload = function () {
-          const preloader = document.querySelector('.page-loading')
-          preloader.classList.remove('active')
-          setTimeout(function () {
-            preloader.remove()
-          }, 1500)
-        }
-      })()
-    </script>
-
   </head>
 
-
-  <!-- Body -->
   <body>
 
+    <!-- ─── HEADER ───────────────────────────────── -->
+    <header>
+      <a class="logo" href="{{ url_for('home') }}">
+        <span class="logo-word">Wayfinder</span>
+        <div class="logo-dot"></div>
+        <span class="logo-tag">Beta</span>
+      </a>
+      <nav class="header-nav">
+        <a class="nav-link" href="{{ url_for('home') }}">Home</a>
+        <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
+      </nav>
+    </header>
 
-    <!-- Page loading spinner -->
-    <div class="page-loading active">
-      <div class="page-loading-inner">
-        <div class="page-spinner"></div>
-        <span>Loading...</span>
-      </div>
-    </div>
-
-
-    <!-- Page wrapper -->
+    <!-- ─── PAGE WRAPPER ─────────────────────────── -->
     <main class="page-wrapper">
 
-      <!-- Navbar. Remove 'fixed-top' class to make the navigation bar scrollable with the page -->
-      <header class="navbar navbar-expand-lg fixed-top">
-        <div class="container">
-
-
-        <!-- CHANGE BELOW - GET RID OF LOGO AND REPLACE WITH SOMETHING ELSE??? -->
-
-        <!-- Navbar brand (Text Logo) -->
-        <a class="navbar-brand pe-sm-3" href="{{ url_for('home') }}">
-            Wayfinder AI
-        </a>
-
-          <!-- Theme switcher -->
-          <div class="form-check form-switch mode-switch order-lg-2 me-3 me-lg-4 ms-auto" data-bs-toggle="mode">
-            <input class="form-check-input" type="checkbox" id="theme-mode">
-            <label class="form-check-label" for="theme-mode">
-              <i class="ai-sun fs-lg"></i>
-            </label>
-            <label class="form-check-label" for="theme-mode">
-              <i class="ai-moon fs-lg"></i>
-            </label>
-          </div>
-
-          <!-- Mobile menu toggler (Hamburger) -->
-          <button class="navbar-toggler ms-sm-3" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-          </button>
-
-                <!-- Navbar collapse (Main navigation) -->
-                <nav class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav navbar-nav-scroll me-auto" style="--ar-scroll-height: 520px;">
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('home') }}" aria-expanded="false">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class= "nav-link" href="{{ url_for('dashboard') }}" aria-expanded="false">Dashboard</a>
-                        </li>
-                    </ul>
-                </nav>
+      <!-- Hero band -->
+      <div class="hero">
+        <div class="hero-eyebrow">
+          <span class="dot"></span>
+          AI-Powered Travel Planning
         </div>
-      </header>
+        <h1>Your Smartest Route Forward</h1>
+        <p>Fill in your travel details below and let Wayfinder craft your perfect itinerary.</p>
+      </div>
 
-      <!-- Contact details -->
-      <section class="bg-secondary py-5">
-        <div class="container pt-5 pb-lg-2 pb-xl-4 py-xxl-5">
+      <!-- Form section -->
+      <div class="form-section">
+        <div class="form-card">
 
-          <!-- Page title -->
-          <h1 class="display-4">Your Smartest Route Forward</h1>
-          <p class="fs-lg pb-4 mb-2 mb-sm-3">Please input your travel details below and click submit.</p>
-
-          <section>
-            <div>
-                <br>
-                  <br>
-                  <br>
-                  <br>
-                  <br>
-                  <br>
-                  <br>
-                <br>
-                <br>
-                <br>
-                <br>
-            </div>
-          </section>
-
-      <!-- Contact form -->
-        <!-- Contact / Request form (DROP-IN REPLACEMENT) -->
-        <section class="container" style="margin-top: -260px; margin-bottom:100px" data-bs-theme="dark">
-          <div class="card border-0 bg-primary position-relative py-lg-4 py-xl-5">
-
-            <!-- Decorative shapes -->
-            <svg class="position-absolute end-0 mt-n2" width="242" height="331" viewBox="0 0 242 331" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M172.014 250.127C137.236 227.74 112.349 192.144 144.586 153.591C157.686 137.932 176.759 127.973 196.524 122.046C234.647 110.639 277.027 113.361 313.349 129.576C338.19 140.666 361.129 159.183 369.934 184.502C383.476 223.496 359.75 260.161 321.569 273.118C288.832 284.223 247.685 279.513 214.885 269.837C201.003 265.743 185.745 258.966 172.014 250.127Z" fill="#121519" fill-opacity=".07"></path>
-              <path d="M20.3265 69.264C19.7064 43.0736 29.8071 17.1878 62.3851 19.8622C75.6229 20.9505 87.9525 27.2066 98.3563 35.3132C118.426 50.9253 132.424 73.896 136.952 98.6413C140.044 115.562 138.424 134.218 127.978 148C111.901 169.236 83.4531 170.283 62.5246 155.209C44.5807 142.281 32.0983 119.217 25.3391 98.6799C22.4836 89.9885 20.5616 79.6021 20.3265 69.264Z" fill="#121519" fill-opacity=".07"></path>
-            </svg>
-            <svg class="position-absolute start-0 bottom-0 ms-3" width="169" height="217" viewBox="0 0 169 217" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M34.2574 90.0177C29.666 97.6253 26.6254 106.591 24.9502 114.96C19.9522 140.043 26.4112 168.792 49.6162 181.885C66.0705 191.17 91.0017 189.904 108.062 183.692C125.725 177.266 135.045 168.04 142.29 150.389C151.409 128.174 150.912 99.6904 125.93 91.6429C115.423 88.254 104.723 86.5065 94.2249 82.5889C84.6622 79.0248 74.8545 72.1766 64.4411 71.6149C50.8011 70.8777 40.9122 79.0146 34.2574 90.0177Z" fill="#121519" fill-opacity="0.07"></path>
-              <path d="M147.005 75.6331C152.135 70.7783 156.106 64.2374 159.153 57.9073C166.014 43.6372 174.127 22.1368 160.207 9.68505C152.924 3.17188 139.243 3.86644 130.324 5.29774C118.428 7.20428 107.295 8.85077 96.5031 14.783C85.8056 20.6599 79.0155 33.6997 77.0014 45.6686C75.4978 54.5776 79.63 63.6672 84.7391 70.7453C91.8208 80.5571 103.5031 84.2003 114.817 84.3975C121.101 84.5081 127.716 84.0527 133.89 82.8121C138.932 81.7962 143.273 79.1597 147.005 75.6331Z" fill="#121519" fill-opacity="0.07"></path>
-            </svg>
-
-            <div class="card-body position-relative z-2 py-5">
-              <!-- Keep action pointing at your current route for now -->
-              <form class="mx-auto" style="max-width: 800px;" method="POST" action="{{ url_for('request_trip') }}">
-                <h2 class="h1 card-title text-center pb-4">Where do you want to go?</h2>
-
-                <div class="row g-4">
-
-                  <!-- traveler_name -->
-                  <div class="col-sm-6">
-                    <label class="form-label fs-base" for="traveler_name">Your name</label>
-                    <input class="form-control form-control-lg"
-                           type="text"
-                           placeholder="Your name"
-                           required
-                           id="traveler_name"
-                           name="traveler_name"
-                           autocomplete="name">
-                  </div>
-
-                  <!-- email -->
-                  <div class="col-sm-6">
-                    <label class="form-label fs-base" for="email">Email</label>
-                    <input class="form-control form-control-lg"
-                           type="email"
-                           placeholder="Email address"
-                           id="email"
-                           name="email"
-                           autocomplete="email">
-                  </div>
-
-                  <!-- origin -->
-                  <div class="col-sm-6">
-                    <label class="form-label fs-base" for="origin">Origin</label>
-                    <input class="form-control form-control-lg"
-                           type="text"
-                           placeholder="Where are you traveling from?"
-                           id="origin"
-                           name="origin"
-                           autocomplete="address-level2">
-                  </div>
-
-                  <!-- desired_destination -->
-                  <div class="col-sm-6">
-                    <label class="form-label fs-base" for="desired_destination">Destination</label>
-                    <input class="form-control form-control-lg"
-                           type="text"
-                           placeholder="Where do you want to go?"
-                           id="desired_destination"
-                           name="desired_destination"
-                           autocomplete="off">
-                  </div>
-
-                  <!-- travel_dates -->
-                  <div class="col-sm-6">
-                    <label class="form-label fs-base" for="travel_dates">Travel dates</label>
-                    <input class="form-control form-control-lg"
-                           type="text"
-                           placeholder="e.g., May 10 - May 20"
-                           id="travel_dates"
-                           name="travel_dates"
-                           autocomplete="off">
-                  </div>
-
-                  <!-- budget -->
-                  <div class="col-sm-6">
-                    <label class="form-label fs-base" for="budget">Budget</label>
-                    <input class="form-control form-control-lg"
-                           type="text"
-                           placeholder="e.g., $2,000 total"
-                           id="budget"
-                           name="budget"
-                           autocomplete="off">
-                  </div>
-
-                  <!-- preferences -->
-                  <div class="col-sm-12">
-                    <label class="form-label fs-base" for="preferences">Preferences</label>
-                    <textarea class="form-control form-control-lg"
-                              rows="4"
-                              placeholder="Food, shopping, nature, museums, nightlife, pace, must-sees, etc."
-                              id="preferences"
-                              name="preferences"
-                              autocomplete="off"></textarea>
-                  </div>
-
-                  <!-- raw_request -->
-                  <div class="col-sm-12">
-                    <label class="form-label fs-base" for="raw_request">Trip description</label>
-                    <textarea class="form-control form-control-lg"
-                              rows="6"
-                              placeholder="Describe what you want out of this trip (constraints, priorities, style, must-avoid, etc.)"
-                              required
-                              id="raw_request"
-                              name="raw_request"
-                              autocomplete="off"></textarea>
-                  </div>
-
-                  {% with messages = get_flashed_messages(with_categories=true) %}
-                  {% if messages %}
-                    <div class="flashes">
-                      {% for category, message in messages %}
-                        <div class="alert alert-{{ category }}">{{ message }}</div>
-                      {% endfor %}
-                    </div>
-                  {% endif %}
-                  {% endwith %}
-
-                  <div class="col-sm-12 text-center pt-4">
-                    <button class="btn btn-lg btn-light" type="submit">Send a request</button>
-                  </div>
-
-                </div>
-              </form>
-            </div>
-
+          <div class="form-card-header">
+            <h2>Where do you want to go?</h2>
+            <p>All fields marked as required must be completed before submitting.</p>
           </div>
-        </section>
+
+          <form method="POST" action="{{ url_for('request_trip') }}">
+            <div class="form-body">
+              <div class="form-grid">
+
+                <!-- traveler_name -->
+                <div class="form-group">
+                  <label class="form-label" for="traveler_name">Your name</label>
+                  <input class="form-control"
+                         type="text"
+                         placeholder="Your name"
+                         required
+                         id="traveler_name"
+                         name="traveler_name"
+                         autocomplete="name">
+                </div>
+
+                <!-- email -->
+                <div class="form-group">
+                  <label class="form-label" for="email">Email</label>
+                  <input class="form-control"
+                         type="email"
+                         placeholder="Email address"
+                         id="email"
+                         name="email"
+                         autocomplete="email">
+                </div>
+
+                <!-- origin -->
+                <div class="form-group">
+                  <label class="form-label" for="origin">Origin</label>
+                  <input class="form-control"
+                         type="text"
+                         placeholder="Where are you traveling from?"
+                         id="origin"
+                         name="origin"
+                         autocomplete="address-level2">
+                </div>
+
+                <!-- desired_destination -->
+                <div class="form-group">
+                  <label class="form-label" for="desired_destination">Destination</label>
+                  <input class="form-control"
+                         type="text"
+                         placeholder="Where do you want to go?"
+                         id="desired_destination"
+                         name="desired_destination"
+                         autocomplete="off">
+                </div>
+
+                <!-- travel_dates -->
+                <div class="form-group">
+                  <label class="form-label" for="travel_dates">Travel dates</label>
+                  <input class="form-control"
+                         type="text"
+                         placeholder="e.g., May 10 – May 20"
+                         id="travel_dates"
+                         name="travel_dates"
+                         autocomplete="off">
+                </div>
+
+                <!-- budget -->
+                <div class="form-group">
+                  <label class="form-label" for="budget">Budget</label>
+                  <input class="form-control"
+                         type="text"
+                         placeholder="e.g., $2,000 total"
+                         id="budget"
+                         name="budget"
+                         autocomplete="off">
+                </div>
+
+                <!-- preferences -->
+                <div class="form-group full">
+                  <label class="form-label" for="preferences">Preferences</label>
+                  <textarea class="form-control"
+                            id="preferences"
+                            name="preferences"
+                            placeholder="Food, shopping, nature, museums, nightlife, pace, must-sees, etc."
+                            autocomplete="off"></textarea>
+                </div>
+
+                <!-- raw_request -->
+                <div class="form-group full">
+                  <label class="form-label" for="raw_request">Trip description <span style="color:var(--accent)">*</span></label>
+                  <textarea class="form-control tall"
+                            required
+                            id="raw_request"
+                            name="raw_request"
+                            placeholder="Describe what you want out of this trip (constraints, priorities, style, must-avoid, etc.)"
+                            autocomplete="off"></textarea>
+                </div>
+
+                <!-- Flash messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                  <div class="flashes">
+                    {% for category, message in messages %}
+                      <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+                {% endwith %}
+
+              </div>
+            </div>
+
+            <div class="form-footer">
+              <button class="btn-submit" type="submit">Send a request →</button>
+            </div>
+          </form>
+
+        </div>
+      </div>
 
     </main>
 
-
-    <!-- Back to top button -->
-{#    <a class="btn-scroll-top" href="#top" data-scroll aria-label="Scroll back to top">#}
-{#      <svg viewBox="0 0 40 40" fill="currentColor" xmlns="http://www.w3.org/2000/svg">#}
-{#        <circle cx="20" cy="20" r="19" fill="none" stroke="currentColor" stroke-width="1.5" stroke-miterlimit="10"></circle>#}
-{#      </svg>#}
-{#      <i class="ai-arrow-up"></i>#}
-{#    </a>#}
-
-    <!-- Bootstrap + Theme scripts -->
-    <script src="../static/assets/js/theme.min.js"></script>
   </body>
 </html>

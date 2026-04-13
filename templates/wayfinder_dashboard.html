@@ -34,7 +34,6 @@
       color: var(--text);
       font-family: 'DM Sans', sans-serif;
       font-size: 14px;
-<!--      overflow-y: auto;-->
     }
 
     /* ─── HEADER ─────────────────────────────── */
@@ -280,7 +279,6 @@
     /* ─── RESULTS PANEL ──────────────────────── */
     .results-panel {
       height: 400px;
-<!--      overflow-y: auto;-->
       flex: 1;
       background: var(--surface);
       border: 1px solid var(--border);
@@ -325,7 +323,7 @@
     }
 
     .results-list {
-<!--      overflow-y: auto;-->
+      overflow-y: auto;
       max-height: 340px;
       flex: 1;
       padding: 12px;
@@ -463,16 +461,20 @@
   </div>
 </header>
 
+<div id="chat-backdrop" onclick="toggleChat()" style="
+  position:fixed;inset:0;background:rgba(0,0,0,0.6);
+  backdrop-filter:blur(4px);z-index:99;display:none;"></div>
+
 <!-- CHAT PANEL -->
 <div id="chat-panel" style="
-  position:fixed;bottom:24px;right:24px;
-  width:360px;height:500px;
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:min(720px,90vw);height:min(600px,85vh);
   background:#17171a;border:1px solid rgba(255,255,255,0.07);
-  border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.6);
+  border-radius:16px;box-shadow:0 24px 64px rgba(0,0,0,0.8);
   display:none;flex-direction:column;z-index:100;overflow:hidden;">
 
   <div style="padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:space-between;">
-    <span style="font-weight:600;font-size:14px;color:#e8e8ec;">Travel Assistant</span>
+    <span style="font-weight:600;font-size:14px;color:#e8e8ec;">Wayfinder</span>
     <span onclick="toggleChat()" style="cursor:pointer;color:#7c7c8a;font-size:18px;line-height:1;">&times;</span>
   </div>
 
@@ -489,262 +491,6 @@
       cursor:pointer;font-family:inherit;">Send</button>
   </div>
 </div>
-
-<!-- ─── CHATBOT ────────────────────────────────── -->
-<script>
-let chatOpen = false;
-let chatHistory = [];
-
-let activeSubmissionId = null;
-let pendingEdit = null; // major trip rebuild edits
-
-let pendingProposedEdit = null; // specific itinerary edit from backend
-
-/**
- * Option C support:
- * - Keep an active submission id for the chat session
- * - When a major edit is detected, ask the user to type "confirm"
- * - On confirm, POST /api/chat with apply_changes + edit object
- * - If backend returns new_submission_id, switch the active submission id
- */
-
-function toggleChat() {
-  chatOpen = !chatOpen;
-  const panel = document.getElementById('chat-panel');
-  panel.style.display = chatOpen ? 'flex' : 'none';
-}
-
-function appendMessage(role, text) {
-  const el = document.createElement('div');
-  el.style.cssText = `
-    padding:10px 13px;border-radius:10px;font-size:13px;line-height:1.5;max-width:88%;
-    ${role === 'user'
-      ? 'background:#5b8dff;color:#fff;align-self:flex-end;'
-      : 'background:#1e1e23;color:#e8e8ec;align-self:flex-start;border:1px solid rgba(255,255,255,0.07);'}
-  `;
-  el.textContent = text;
-  document.getElementById('chat-messages').appendChild(el);
-  document.getElementById('chat-messages').scrollTop = 999999;
-}
-
-function isConfirmMessage(text) {
-  const t = (text || "").toLowerCase();
-
-  const keywords = [
-    "confirm",
-    "apply",
-    "go ahead",
-    "do it",
-    "make the change",
-    "sounds good",
-    "that works",
-    "yes"
-  ];
-
-  return keywords.some(k => t.includes(k));
-}
-
-/**
- * Very simple heuristic: detects destination change intent.
- * Examples it catches:
- * - "change my trip to Los Angeles"
- * - "change destination to LA"
- * - "can I change my trip to Los Angeles?"
- */
-
- function cleanDestinationText(dest) {
-  let d = (dest || "").trim();
-
-  d = d.replace(/^[Aa]\s+trip\s+to\s+/i, "");
-  d = d.replace(/^[Tt]rip\s+to\s+/i, "");
-  d = d.replace(/^[Tt]o\s+/i, "");
-  d = d.replace(/\?+$/g, "");
-  d = d.replace(/\.+$/g, "");
-  d = d.replace(/\s+instead$/i, "");
-  d = d.trim();
-
-  return d;
-}
-
-function extractMajorEdit(text) {
-  const t = (text || "").trim();
-
-  const patterns = [
-    /change (my )?(trip|destination)( to)? (.+)$/i,
-    /can i change (my )?(trip|destination)( to)? (.+)$/i,
-    /let'?s go to (.+)$/i,
-    /make it (.+)$/i
-  ];
-
-  for (const re of patterns) {
-    const m = t.match(re);
-    if (m) {
-      const rawDest = (m[m.length - 1] || "").trim();
-      const dest = cleanDestinationText(rawDest);
-      if (dest.length >= 2) return { desired_destination: dest };
-    }
-  }
-
-  return null;
-}
-
-async function getLatestContext() {
-  const res = await fetch('/api/latest', { cache: 'no-store' });
-  const json = await res.json();
-  const latest = json?.latest || null;
-
-  return {
-    ok: Boolean(json?.ok && latest),
-    latest,
-    latestId: latest?.id ?? null,
-    planContext: latest?.plan?.plan_json ?? ''
-  };
-}
-
-async function sendChat() {
-  const input = document.getElementById('chat-input');
-  const text = input.value.trim();
-  if (!text) return;
-  input.value = '';
-
-  appendMessage('user', text);
-  chatHistory.push({ role: 'user', content: text });
-
-  // Show thinking bubble immediately
-  appendMessage('assistant', '…');
-  const msgs = document.getElementById('chat-messages');
-  const thinking = msgs.lastChild;
-
-  // Ensure we have an active submission id for this chat session
-  // (only set it once; do NOT reset it each message)
-  let planContext = '';
-  try {
-    const ctx = await getLatestContext();
-
-    if (!ctx.ok) {
-      thinking.textContent = "No trip found yet. Submit a trip request first.";
-      return;
-    }
-
-    // If chat hasn't been "bound" yet, bind it to latest
-    if (!activeSubmissionId) {
-      activeSubmissionId = ctx.latestId;
-    }
-
-    // Plan context should match the active submission.
-    // We only have /api/latest, so:
-    // - if activeSubmissionId === latestId: use latest plan_json
-    // - else: send empty plan_context (backend can still handle chat)
-    if (activeSubmissionId === ctx.latestId) {
-      planContext = ctx.planContext || '';
-    } else {
-      planContext = '';
-    }
-
-  } catch (e) {
-    console.warn("Failed to load /api/latest:", e);
-    thinking.textContent = "Couldn't load your trip context. Try refreshing the page.";
-    return;
-  }
-
-  // --- Option C confirmation flow ---
-  const maybeEdit = extractMajorEdit(text);
-
-  // If user typed an edit request, store it and ask to confirm
-  if (maybeEdit && !isConfirmMessage(text)) {
-    pendingEdit = {
-      ...(pendingEdit || {}),
-      ...maybeEdit
-    };
-
-    const dest = pendingEdit.desired_destination || "that destination";
-    const confirmMsg =
-      `Got it — you want to change your trip to ${dest}.\n\n` +
-      `Type "confirm" to apply this change.`;
-
-    thinking.textContent = confirmMsg;
-    chatHistory.push({ role: 'assistant', content: confirmMsg });
-    return;
-  }
-
-  const confirming = isConfirmMessage(text);
-
-  const applyingSpecificEdit = confirming && pendingProposedEdit;
-  const applyingMajorEdit = confirming && !pendingProposedEdit && pendingEdit;
-
-  const payload = {
-    submission_id: activeSubmissionId,
-    messages: chatHistory,
-    plan_context: planContext,
-    ...(applyingSpecificEdit
-      ? { apply_specific_edit: true, proposed_edit: pendingProposedEdit }
-      : {}),
-    ...(applyingMajorEdit
-      ? { apply_changes: true, edit: pendingEdit }
-      : {})
-  };
-
-  console.log("POST /api/chat payload:", payload);
-
-  try {
-    const chatRes = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    const raw = await chatRes.text();
-    console.log("chat status:", chatRes.status, chatRes.headers.get("content-type"));
-    console.log("chat raw response:", raw);
-
-    if (!chatRes.ok) {
-      thinking.textContent = `Chat failed (HTTP ${chatRes.status}).`;
-      return;
-    }
-
-    let chatJson;
-    try {
-      chatJson = JSON.parse(raw);
-    } catch (e) {
-      thinking.textContent = "Chat returned invalid JSON.";
-      return;
-    }
-
-    const reply = chatJson?.reply ?? "No reply.";
-    thinking.textContent = reply;
-    chatHistory.push({ role: 'assistant', content: reply });
-
-    if (chatJson?.proposed_edit) {
-      pendingProposedEdit = chatJson.proposed_edit;
-    }
-
-    if (chatJson?.applied_specific_edit) {
-      pendingProposedEdit = null;
-      chatHistory = chatHistory.slice(-2);
-      try { pollLatest(); } catch (e) {}
-    }
-
-    // If backend created a new submission, switch the active one
-    if (chatJson?.new_submission_id) {
-      activeSubmissionId = chatJson.new_submission_id;
-      pendingEdit = null;
-      pendingProposedEdit = null;
-      chatHistory = [];
-
-      // optional: clear currentType selection so the new destination starts clean
-      currentType = null;
-      document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-
-      // pull fresh /api/latest immediately (your interval will also catch it)
-            try { pollLatest(); } catch (e) {}
-    }
-
-  } catch (e) {
-    console.warn("Chat request failed:", e);
-    thinking.textContent = 'Something went wrong. Try again.';
-  }
-}
-</script>
 
 <!-- ─── APP BODY ────────────────────────────────── -->
 <div class="app">
@@ -952,8 +698,9 @@ let data = {
   poi: [],
 };
 
-let currentType = null;
 let lastSubmissionId = null;
+let currentType = null;
+let activeSubmissionId = null;
 
 // ---- UI helpers ----
 function setEmptyState() {
@@ -1472,12 +1219,18 @@ let chatHistory = [];
 function toggleChat() {
   chatOpen = !chatOpen;
   const panel = document.getElementById('chat-panel');
+  const backdrop = document.getElementById('chat-backdrop');
   panel.style.display = chatOpen ? 'flex' : 'none';
+  if (backdrop) backdrop.style.display = chatOpen ? 'block' : 'none';
 
-  // Show greeting only on first open
   if (chatOpen && chatHistory.length === 0) {
-    appendMessage('assistant', "Hi! I'm Wayfinder's travel assistant. I can help you understand your itinerary, suggest changes, or answer questions about your destination. How can I help?");
+    appendMessage('assistant', "Hi! I'm Wayfinder. I can help you understand your itinerary, suggest changes, or answer questions about your destination. How can I help?");
   }
+}
+
+// Auto-open when arriving from a form submission
+if (document.referrer.includes('/request') || new URLSearchParams(location.search).has('new')) {
+  toggleChat();
 }
 
 function appendMessage(role, text) {
