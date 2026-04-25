@@ -19,6 +19,8 @@ from tools.places_tool import run as run_places
 from tools.transit_tool import run as run_transit
 from tools.alerts_tool import run as run_alerts
 from tools.email_alert_tool import run as run_email_alert
+from tools.culture_tool import run as run_culture
+from tools.events_tool import run as run_events
 
 
 POLL_SECONDS = float(os.getenv("WAYFINDER_WORKER_POLL_SECONDS", "2.0"))
@@ -30,6 +32,8 @@ TOOL_RUNNERS = {
     "transit": run_transit,
     "alerts": run_alerts,
     "email_alert": run_email_alert,
+    "culture": run_culture,
+    "events": run_events,
 }
 
 

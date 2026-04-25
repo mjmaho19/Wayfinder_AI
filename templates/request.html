@@ -436,16 +436,30 @@
                          autocomplete="off">
                 </div>
 
-                <!-- travel_dates -->
-                <div class="form-group">
-                  <label class="form-label" for="travel_dates">Travel dates</label>
-                  <input class="form-control"
-                         type="text"
-                         placeholder="e.g., May 10 – May 20"
-                         id="travel_dates"
-                         name="travel_dates"
-                         autocomplete="off">
-                </div>
+<!-- travel_dates -->
+<div class="form-group full">
+  <label class="form-label">Travel dates</label>
+  <div style="display:flex;gap:12px;align-items:center;">
+    <div style="flex:1;display:flex;flex-direction:column;gap:7px;">
+      <span style="font-size:11px;color:var(--muted);">From</span>
+      <input class="form-control"
+             type="date"
+             id="date_start"
+             name="date_start"
+             required>
+    </div>
+    <div style="color:var(--muted);padding-top:22px;">→</div>
+    <div style="flex:1;display:flex;flex-direction:column;gap:7px;">
+      <span style="font-size:11px;color:var(--muted);">To</span>
+      <input class="form-control"
+             type="date"
+             id="date_end"
+             name="date_end"
+             required>
+    </div>
+  </div>
+  <input type="hidden" id="travel_dates" name="travel_dates">
+</div>
 
                 <!-- budget -->
                 <div class="form-group">
@@ -502,6 +516,16 @@
       </div>
 
     </main>
+
+    <script>
+  document.querySelector('form').addEventListener('submit', function() {
+    const start = document.getElementById('date_start').value;
+    const end   = document.getElementById('date_end').value;
+    if (start && end) {
+      document.getElementById('travel_dates').value = `${start} to ${end}`;
+    }
+  });
+</script>
 
   </body>
 </html>

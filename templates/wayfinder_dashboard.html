@@ -4,8 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wayfinder – Dashboard</title>
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAUb3y_iv4wLZsd9eiFsmHqipmYbL9p5X4&callback=initMap&loading=async" defer>
-  </script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAUb3y_iv4wLZsd9eiFsmHqipmYbL9p5X4&libraries=places&callback=initMap&loading=async" defer></script>  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
 
@@ -125,13 +124,125 @@
       gap: 16px;
     }
 
-    /* top row: map + sidebar */
+    /* top row: itinerary + map + sidebar */
     .top-row {
       display: flex;
       gap: 16px;
       flex: 0 0 auto;
       height: 52vh;
       min-height: 320px;
+    }
+
+    /* ─── ITINERARY PANEL ────────────────────── */
+    .itinerary-panel {
+      width: 28%;
+      flex-shrink: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .itinerary-panel-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .itinerary-day-tabs {
+      display: flex;
+      gap: 4px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .itinerary-day-tabs::-webkit-scrollbar { display: none; }
+
+    .itin-tab {
+      padding: 4px 10px;
+      border-radius: 99px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--muted);
+      white-space: nowrap;
+      transition: all .15s;
+    }
+    .itin-tab.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .itinerary-body {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .itinerary-body::-webkit-scrollbar { width: 4px; }
+    .itinerary-body::-webkit-scrollbar-track { background: transparent; }
+    .itinerary-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .itin-slot {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 8px 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    .itin-time {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--accent);
+      white-space: nowrap;
+      min-width: 52px;
+      padding-top: 1px;
+    }
+
+    .itin-content {}
+    .itin-label {
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 2px;
+    }
+    .itin-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .itin-empty {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+      padding: 20px;
     }
 
     /* ─── MAP ────────────────────────────────── */
@@ -170,7 +281,7 @@
       border: 1px solid var(--border);
       border-radius: 10px;
       padding: 8px 14px;
-      width: 280px;
+      width: 220px;
     }
     .map-search input {
       background: none;
@@ -276,9 +387,183 @@
     .filter-icon { font-size: 22px; line-height: 1; }
     .filter-label { font-size: 9px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
 
+    /* ─── CULTURE & EVENTS ROW ───────────────── */
+    .info-row {
+      display: flex;
+      gap: 16px;
+      margin-top: 12px;
+    }
+
+    .info-panel {
+      flex: 1;
+      min-width: 0;
+      height: 500px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .info-panel-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .info-panel-header span {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .info-panel-header .info-badge {
+      margin-left: auto;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      padding: 2px 9px;
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .info-panel-body {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .info-panel-body::-webkit-scrollbar { width: 4px; }
+    .info-panel-body::-webkit-scrollbar-track { background: transparent; }
+    .info-panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* Culture fact card */
+    .culture-fact {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    .culture-fact-emoji {
+      font-size: 20px;
+      line-height: 1.3;
+      flex-shrink: 0;
+    }
+
+    .culture-fact-content {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      min-width: 0;
+    }
+
+    .culture-fact-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 3px;
+    }
+
+    .culture-fact-body {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* Quick tips strip */
+    .culture-tips {
+      border-top: 1px solid var(--border);
+      padding: 10px 16px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .culture-tips-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 2px;
+    }
+
+    .culture-tip {
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      gap: 6px;
+      align-items: flex-start;
+    }
+
+    .culture-tip::before {
+      content: "→";
+      color: #5b8dff;
+      flex-shrink: 0;
+    }
+
+    /* Events card */
+    .event-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+
+    .event-card-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 3px;
+    }
+
+    .event-card-meta {
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .event-card-meta span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Empty / loading states for info panels */
+    .info-empty {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .info-empty-icon { font-size: 28px; }
+
     /* ─── RESULTS PANEL ──────────────────────── */
     .results-panel {
-      height: 400px;
+      min-height: 400px;
       flex: 1;
       background: var(--surface);
       border: 1px solid var(--border);
@@ -286,7 +571,6 @@
       overflow: hidden;
       display: flex;
       flex-direction: column;
-      min-height: 0;
     }
 
     .results-header {
@@ -324,8 +608,8 @@
 
     .results-list {
       overflow-y: auto;
-      max-height: 340px;
       flex: 1;
+      min-height: 0;
       padding: 12px;
       display: flex;
       flex-direction: column;
@@ -453,11 +737,21 @@
       <span class="status-dot"></span>
       <span id="header-location">Locating…</span>
     </div>
-    <div class="avatar" id="chat-trigger" onclick="toggleChat()" title="Travel Assistant" style="cursor:pointer;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-      </svg>
-    </div>
+    <div style="display:flex;align-items:center;gap:8px;cursor:pointer;" onclick="toggleChat()" title="Travel Assistant">
+  <div style="
+    background:var(--surface2);border:1px solid var(--border);
+    border-radius:99px;padding:5px 12px;font-size:12px;color:var(--muted);
+    display:flex;align-items:center;gap:6px;
+    animation: pulse 2s infinite;">
+    <span style="font-size:14px;">✈️</span>
+    Ask your travel assistant
+  </div>
+  <div class="avatar" id="chat-trigger">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>
+  </div>
+</div>
   </div>
 </header>
 
@@ -495,15 +789,30 @@
 <!-- ─── APP BODY ────────────────────────────────── -->
 <div class="app">
 
-  <!-- TOP: Map + Sidebar -->
+  <!-- TOP: Itinerary + Map + Sidebar -->
   <div class="top-row">
+
+    <!-- ITINERARY PANEL -->
+    <div class="itinerary-panel">
+      <div class="itinerary-panel-header">
+        <span>🗓️ Itinerary</span>
+        <span id="itin-destination" style="font-size:11px;color:var(--muted);font-weight:400;"></span>
+      </div>
+      <div class="itinerary-day-tabs" id="itin-tabs"></div>
+      <div class="itinerary-body" id="itin-body">
+        <div class="itin-empty">
+          <div style="font-size:24px;">🗺️</div>
+          <div>Your itinerary will appear<br/>here once your trip is planned.</div>
+        </div>
+      </div>
+    </div>
 
     <!-- MAP -->
     <div class="map-wrapper">
       <div id="map">
         <div id="pins"></div>
 
-        <!-- Real Google Map (powered by Google Maps API) -->
+        <!-- Real Google Map -->
         <div id="google-map" style="width:100%;height:100%;position:absolute;inset:0;"></div>
         <div id="map-loading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#141820;color:#7c7c8a;font-size:13px;z-index:10;pointer-events:none;">Loading map…
         </div>
@@ -587,7 +896,7 @@
     </div>
   </div>
 
-  <!-- BOTTOM: Results panel -->
+  <!-- RESULTS PANEL -->
   <div class="results-panel">
     <div class="results-header">
       <div class="results-title">
@@ -602,7 +911,7 @@
       </div>
     </div>
 
-    <!-- Column headers (shown when results are visible) -->
+    <!-- Column headers -->
     <div class="col-headers" id="col-headers" style="display:none">
       <span class="ch-name" id="ch-name">Name</span>
       <div class="ch-right" id="ch-right"></div>
@@ -616,55 +925,80 @@
     </div>
   </div>
 
-  <!-- TRANSIT BLOCK -->
-<div class="panel" id="transit-panel" style="margin-top:12px;height:400px;">
-  <div class="panel-header" style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.07);">
-    <span style="font-size:13px;font-weight:600;color:#e8e8ec;">Transit Routes</span>
-    <div style="display:flex;gap:8px;">
-      <button id="btn-bus" onclick="selectTransitMode('BUS')" style="
-        padding:5px 14px;border-radius:6px;font-size:12px;font-family:inherit;cursor:pointer;
-        background:#5b8dff;color:#fff;border:none;">🚌 Bus</button>
-      <button id="btn-rail" onclick="selectTransitMode('RAIL')" style="
-        padding:5px 14px;border-radius:6px;font-size:12px;font-family:inherit;cursor:pointer;
-        background:#1e1e23;color:#7c7c8a;border:1px solid rgba(255,255,255,0.07);">🚆 Train</button>
+  <!-- CULTURE & EVENTS ROW -->
+  <div class="info-row">
+
+    <!-- Culture Panel -->
+    <div class="info-panel" id="culture-panel">
+      <div class="info-panel-header">
+        <span>🌍 Culture & Local Life</span>
+        <span class="info-badge" id="culture-badge">—</span>
+      </div>
+      <div class="info-panel-body" id="culture-body">
+        <div class="info-empty">
+          <div class="info-empty-icon">🌐</div>
+          <div>Cultural facts will appear here<br/>once your trip is submitted.</div>
+        </div>
+      </div>
+      <div class="culture-tips" id="culture-tips" style="display:none;"></div>
     </div>
+
+    <!-- Events Panel -->
+    <div class="info-panel" id="events-panel">
+      <div class="info-panel-header">
+        <span>🎉 Local Events</span>
+        <span class="info-badge" id="events-badge">—</span>
+      </div>
+      <div class="info-panel-body" id="events-body">
+        <div class="info-empty">
+          <div class="info-empty-icon">📅</div>
+          <div>Local events for your travel window<br/>will appear here once integrated.</div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
-  <div style="display:flex;gap:10px;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.07);">
-    <input id="transit-from" type="text" placeholder="From…" style="
-      flex:1;background:#1e1e23;border:1px solid rgba(255,255,255,0.07);
-      border-radius:8px;padding:8px 12px;color:#e8e8ec;font-size:13px;
-      font-family:inherit;outline:none;">
+  <!-- TRANSIT BLOCK -->
+  <div class="panel" id="transit-panel" style="margin-top:12px;height:400px;">
+    <div class="panel-header" style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.07);">
+      <span style="font-size:13px;font-weight:600;color:#e8e8ec;">Transit Routes</span>
+      <div style="display:flex;gap:8px;">
+        <button id="btn-bus" onclick="selectTransitMode('BUS')" style="
+          padding:5px 14px;border-radius:6px;font-size:12px;font-family:inherit;cursor:pointer;
+          background:#5b8dff;color:#fff;border:none;">🚌 Bus</button>
+        <button id="btn-rail" onclick="selectTransitMode('RAIL')" style="
+          padding:5px 14px;border-radius:6px;font-size:12px;font-family:inherit;cursor:pointer;
+          background:#1e1e23;color:#7c7c8a;border:1px solid rgba(255,255,255,0.07);">🚆 Train</button>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.07);">
+      <input id="transit-from" type="text" placeholder="From…" style="
+        flex:1;background:#1e1e23;border:1px solid rgba(255,255,255,0.07);
+        border-radius:8px;padding:8px 12px;color:#e8e8ec;font-size:13px;
+        font-family:inherit;outline:none;">
     <div style="display:flex;align-items:center;color:#7c7c8a;font-size:16px;">⇄</div>
     <input id="transit-to" type="text" placeholder="To…" style="
-      flex:1;background:#1e1e23;border:1px solid rgba(255,255,255,0.07);
-      border-radius:8px;padding:8px 12px;color:#e8e8ec;font-size:13px;
-      font-family:inherit;outline:none;">
-    <button onclick="searchTransit()" style="
-      background:#5b8dff;border:none;border-radius:8px;
-      padding:8px 16px;color:#fff;font-size:13px;
-      cursor:pointer;font-family:inherit;">Search</button>
-  </div>
+        flex:1;background:#1e1e23;border:1px solid rgba(255,255,255,0.07);
+        border-radius:8px;padding:8px 12px;color:#e8e8ec;font-size:13px;
+        font-family:inherit;outline:none;">
+      <button onclick="searchTransit()" style="
+        background:#5b8dff;border:none;border-radius:8px;
+        padding:8px 16px;color:#fff;font-size:13px;
+        cursor:pointer;font-family:inherit;">Search</button>
+    </div>
 
-  <div id="transit-results" style="padding:14px 18px;min-height:80px;max-height:300px;">
-    <div style="color:#7c7c8a;font-size:13px;text-align:center;padding:24px 0;">
-      Enter origin and destination to search routes.
+    <div id="transit-results" style="padding:14px 18px;min-height:80px;max-height:300px;">
+      <div style="color:#7c7c8a;font-size:13px;text-align:center;padding:24px 0;">
+        Enter origin and destination to search routes.
+      </div>
     </div>
   </div>
-</div>
 
 </div>
 
 <script>
-/**
- * Wayfinder dashboard (Choice #1):
- * - Polls /api/latest
- * - Reads ToolResult where tool_name === "places"
- * - Parses result_json
- * - Groups payload.items by item.type into UI categories:
- *     restaurant, shop, hotel, bathroom, poi
- */
-
 const accentColors = {
   restaurant: { bg: "rgba(255,107,107,.18)", fg: "#ff6b6b" },
   shop:       { bg: "rgba(91,141,255,.18)",  fg: "#5b8dff" },
@@ -701,6 +1035,10 @@ let data = {
 let lastSubmissionId = null;
 let currentType = null;
 let activeSubmissionId = null;
+
+// ---- Itinerary state ----
+let itinDays = [];
+let activeItinDay = 0;
 
 // ---- UI helpers ----
 function setEmptyState() {
@@ -910,7 +1248,6 @@ const MAP_MARKER_COLORS = {
 };
 
 async function updateHeaderLocation() {
-  // First try to get city from the latest submission's destination
   try {
     const res = await fetch('/api/latest');
     const data = await res.json();
@@ -921,7 +1258,6 @@ async function updateHeaderLocation() {
     }
   } catch(e) {}
 
-  // Fall back to browser geolocation + reverse geocode
   if (!navigator.geolocation) {
     document.getElementById('header-location').textContent = 'Location unavailable';
     return;
@@ -970,6 +1306,26 @@ async function initMap() {
       });
     }, () => {});
   }
+
+    // Attach Places Autocomplete to transit inputs
+    const fromInput = document.getElementById('transit-from');
+    const toInput   = document.getElementById('transit-to');
+
+    const acOptions = { types: ['geocode', 'establishment'] };
+
+    const fromAuto = new google.maps.places.Autocomplete(fromInput, acOptions);
+    const toAuto   = new google.maps.places.Autocomplete(toInput, acOptions);
+
+    // When a place is selected, use the formatted address for the search
+    fromAuto.addListener('place_changed', () => {
+      const place = fromAuto.getPlace();
+        if (place.formatted_address) fromInput.value = place.formatted_address;
+    });
+
+    toAuto.addListener('place_changed', () => {
+      const place = toAuto.getPlace();
+        if (place.formatted_address) toInput.value = place.formatted_address;
+    });
 }
 
 function wayfinder_mapZoom(delta) {
@@ -1056,6 +1412,7 @@ function parsePlacesResultJson(resultJson) {
   try { return JSON.parse(resultJson); } catch (e) { return null; }
 }
 
+// ── Main payload handler ─────────────────────────────────────────────────────
 function applyLatestPayload(latest) {
   data = { restaurant: [], shop: [], hotel: [], bathroom: [], poi: [] };
   const enabledTypes = new Set();
@@ -1066,34 +1423,190 @@ function applyLatestPayload(latest) {
   if (!placesRow) {
     setButtonsEnabled(new Set());
     setSelectPromptState();
-    return;
-  }
-
-  const placesPayload = parsePlacesResultJson(placesRow.result_json);
-  const items = Array.isArray(placesPayload?.items) ? placesPayload.items : [];
-
-  updateMapCenter(placesPayload);
-
-  for (const item of items) {
-    const t = (item?.type || '').toLowerCase();
-    if (!data[t]) continue;
-    const normalized = _normalizeForUI(item, t);
-    data[t].push(normalized);
-  }
-
-  Object.keys(data).forEach(t => {
-    if ((data[t] || []).length > 0) enabledTypes.add(t);
-  });
-
-  setButtonsEnabled(enabledTypes);
-
-  if (currentType && enabledTypes.has(currentType)) {
-    selectType(currentType);
   } else {
-    setSelectPromptState();
+    const placesPayload = parsePlacesResultJson(placesRow.result_json);
+    const items = Array.isArray(placesPayload?.items) ? placesPayload.items : [];
+
+    updateMapCenter(placesPayload);
+
+    for (const item of items) {
+      const t = (item?.type || '').toLowerCase();
+      if (!data[t]) continue;
+      const normalized = _normalizeForUI(item, t);
+      data[t].push(normalized);
+    }
+
+    Object.keys(data).forEach(t => {
+      if ((data[t] || []).length > 0) enabledTypes.add(t);
+    });
+
+    setButtonsEnabled(enabledTypes);
+
+    if (currentType && enabledTypes.has(currentType)) {
+      selectType(currentType);
+    } else {
+      setSelectPromptState();
+    }
+  }
+
+  const cultureRow = toolResults.find(tr => tr.tool_name === 'culture');
+  renderCulturePanel(cultureRow);
+
+  const eventsRow = toolResults.find(tr => tr.tool_name === 'events');
+  renderEventsPanel(eventsRow);
+
+  renderItineraryPanel(latest);
+}
+
+// ── Itinerary panel ──────────────────────────────────────────────────────────
+function renderItineraryPanel(latest) {
+  const planJson = latest?.plan?.plan_json;
+  if (!planJson) return;
+
+  let plan;
+  try {
+    plan = typeof planJson === 'string' ? JSON.parse(planJson) : planJson;
+  } catch(e) { return; }
+
+  const days = plan?.curated_itinerary;
+  if (!Array.isArray(days) || !days.length) return;
+
+  itinDays = days;
+
+  const dest = plan?.trip?.destination || '';
+  document.getElementById('itin-destination').textContent = dest;
+
+  const tabs = document.getElementById('itin-tabs');
+  tabs.innerHTML = days.map((d, i) => `
+    <div class="itin-tab ${i === activeItinDay ? 'active' : ''}"
+         onclick="selectItinDay(${i})">
+      Day ${d.day}
+    </div>
+  `).join('');
+
+  renderItinDay(activeItinDay);
+}
+
+function selectItinDay(index) {
+  activeItinDay = index;
+  document.querySelectorAll('.itin-tab').forEach((t, i) => {
+    t.classList.toggle('active', i === index);
+  });
+  renderItinDay(index);
+}
+
+function renderItinDay(index) {
+  const day = itinDays[index];
+  if (!day) return;
+
+  const slots = [
+    { time: '9:00 AM',  label: 'Breakfast', name: day.meals?.breakfast?.name },
+    { time: '10:30 AM', label: 'Activity',  name: day.activities?.[0]?.name },
+    { time: '1:00 PM',  label: 'Lunch',     name: day.meals?.lunch?.name },
+    { time: '2:30 PM',  label: 'Activity',  name: day.activities?.[1]?.name },
+    { time: '5:00 PM',  label: 'Free Time', name: 'Explore on your own' },
+    { time: '7:00 PM',  label: 'Dinner',    name: day.meals?.dinner?.name },
+    { time: '8:30 PM',  label: 'Hotel',     name: day.lodging?.name },
+  ];
+
+  const body = document.getElementById('itin-body');
+  body.innerHTML = slots
+    .filter(s => s.name)
+    .map(s => `
+      <div class="itin-slot">
+        <div class="itin-time">${s.time}</div>
+        <div class="itin-content">
+          <div class="itin-label">${s.label}</div>
+          <div class="itin-name">${s.name}</div>
+        </div>
+      </div>
+    `).join('');
+}
+
+// ── Culture panel ────────────────────────────────────────────────────────────
+function renderCulturePanel(cultureRow) {
+  const body = document.getElementById('culture-body');
+  const badge = document.getElementById('culture-badge');
+  const tipsEl = document.getElementById('culture-tips');
+
+  if (!cultureRow) return;
+
+  let payload;
+  try {
+    payload = typeof cultureRow.result_json === 'string'
+      ? JSON.parse(cultureRow.result_json)
+      : cultureRow.result_json;
+  } catch(e) { return; }
+
+  const facts = Array.isArray(payload?.facts) ? payload.facts : [];
+  const tips  = Array.isArray(payload?.quick_tips) ? payload.quick_tips : [];
+
+  if (!facts.length) return;
+
+  badge.textContent = `${facts.length} facts`;
+
+  body.innerHTML = facts.map(f => `
+    <div class="culture-fact">
+      <div class="culture-fact-emoji">${f.emoji || '📌'}</div>
+      <div class="culture-fact-content">
+        <div class="culture-fact-title">${f.title || ''}</div>
+        <div class="culture-fact-body">${f.body || ''}</div>
+      </div>
+    </div>
+  `).join('');
+
+  if (tips.length) {
+    tipsEl.style.display = 'flex';
+    tipsEl.innerHTML = `
+      <div class="culture-tips-label">Quick Tips</div>
+      ${tips.map(t => `<div class="culture-tip">${t}</div>`).join('')}
+    `;
   }
 }
 
+// ── Events panel ─────────────────────────────────────────────────────────────
+function renderEventsPanel(eventsRow) {
+  const body = document.getElementById('events-body');
+  const badge = document.getElementById('events-badge');
+
+  if (!eventsRow) return;
+
+  let payload;
+  try {
+    payload = typeof eventsRow.result_json === 'string'
+      ? JSON.parse(eventsRow.result_json)
+      : eventsRow.result_json;
+  } catch(e) { return; }
+
+  const events = Array.isArray(payload?.events) ? payload.events : [];
+
+  if (!events.length) {
+    badge.textContent = '0';
+    body.innerHTML = `
+      <div class="info-empty">
+        <div class="info-empty-icon">📅</div>
+        <div>No events found for your travel window.</div>
+      </div>`;
+    return;
+  }
+
+  badge.textContent = `${events.length} events`;
+
+  body.innerHTML = events.map(e => `
+    <div class="event-card">
+      <div class="event-card-name">${e.name || 'Unnamed Event'}</div>
+      <div class="event-card-meta">
+        ${e.date    ? `<span>📆 ${e.date}${e.time ? ' · ' + e.time : ''}</span>` : ''}
+        ${e.venue   ? `<span>📍 ${e.venue}</span>` : ''}
+        ${e.genre   ? `<span>🎭 ${e.genre}</span>` : ''}
+        ${e.price   ? `<span>💰 ${e.price}</span>` : ''}
+        ${e.url     ? `<span><a href="${e.url}" target="_blank" style="color:#5b8dff;text-decoration:none;">Tickets →</a></span>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── Polling ───────────────────────────────────────────────────────────────────
 async function pollLatest() {
   try {
     const res = await fetch(`/api/latest?ts=${Date.now()}`, { cache: 'no-store' });
@@ -1109,28 +1622,32 @@ async function pollLatest() {
 
     const latest = json.latest;
 
-    // If chat hasn't been bound to a submission yet, bind to the first latest we see.
-    // This keeps dashboard + chat in sync on first load.
     if (!activeSubmissionId) {
       activeSubmissionId = latest.id;
     }
 
     if (latest.id !== lastSubmissionId) {
-        mapCenter = null;
-        activeMapMarkers.forEach(m => m.setMap(null));
-        activeMapMarkers = [];
+      mapCenter = null;
+      activeMapMarkers.forEach(m => m.setMap(null));
+      activeMapMarkers = [];
       lastSubmissionId = latest.id;
       currentType = null;
+      activeItinDay = 0;
       document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
     }
 
     applyLatestPayload(latest);
+
+    if (latest.status === 'completed') {
+  stopPolling();
+  }
+  
   } catch (err) {
     console.warn('pollLatest failed:', err);
   }
 }
 
-// ---- Events ----
+// ---- Filter button events ----
 document.querySelectorAll('.filter-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     if (btn.disabled) return;
@@ -1146,6 +1663,7 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
   });
 });
 
+// ── Transit ───────────────────────────────────────────────────────────────────
 let transitMode = 'BUS';
 
 function selectTransitMode(mode) {
@@ -1206,15 +1724,32 @@ async function searchTransit() {
 
 // ---- Init ----
 setEmptyState();
+let pollingInterval = null;
+
+function startPolling() {
+  if (pollingInterval) return;
+  pollingInterval = setInterval(pollLatest, 3000);
+}
+
+function stopPolling() {
+  if (pollingInterval) {
+    clearInterval(pollingInterval);
+    pollingInterval = null;
+  }
+}
+
 pollLatest();
-setInterval(pollLatest, 3000);
+startPolling();
 updateHeaderLocation();
 loadWeather();
 </script>
+
 <!-- ─── CHATBOT ────────────────────────────────── -->
 <script>
 let chatOpen = false;
 let chatHistory = [];
+
+const welcomeShown = { value: false };
 
 function toggleChat() {
   chatOpen = !chatOpen;
@@ -1223,15 +1758,15 @@ function toggleChat() {
   panel.style.display = chatOpen ? 'flex' : 'none';
   if (backdrop) backdrop.style.display = chatOpen ? 'block' : 'none';
 
-  if (chatOpen && chatHistory.length === 0) {
+  if (chatOpen && !welcomeShown.value) {
+    welcomeShown.value = true;
     appendMessage('assistant', "Hi! I'm Wayfinder. I can help you understand your itinerary, suggest changes, or answer questions about your destination. How can I help?");
   }
 }
 
-// Auto-open when arriving from a form submission
-if (document.referrer.includes('/request') || new URLSearchParams(location.search).has('new')) {
-  toggleChat();
-}
+// if (document.referrer.includes('/request') || new URLSearchParams(location.search).has('new')) {
+//   toggleChat();
+// }
 
 function appendMessage(role, text) {
   const el = document.createElement('div');
@@ -1255,7 +1790,6 @@ async function sendChat() {
   appendMessage('user', text);
   chatHistory.push({ role: 'user', content: text });
 
-  // Get current plan context
   let planContext = '';
   try {
     const res = await fetch('/api/latest');

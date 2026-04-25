@@ -24,7 +24,7 @@ from utils.plan_utils import (
 
 logger = logging.getLogger(__name__)
 
-REQUIRED_TOOLS = ["weather", "places", "transit"]
+REQUIRED_TOOLS = ["weather", "places", "transit", "culture", "events"]
 
 _client = OpenAI(
     api_key=os.getenv("GROQ_API_KEY"),
@@ -45,7 +45,7 @@ Return ONLY valid JSON (no markdown, no fences, no extra text):
 {
   "status": "processing" | "completed",
   "summary": "2-3 sentence summary",
-  "new_tasks": [{"task_type":"weather|places|transit", "input": {}}],
+  "new_tasks": [{"task_type":"weather|places|transit|culture|events", "input": {}}],
   "plan": {
     "trip": {"traveler_name":"","origin":"","destination":"","travel_dates":"","budget":""},
 
@@ -63,13 +63,13 @@ Return ONLY valid JSON (no markdown, no fences, no extra text):
         "date": "",
         "lodging": {"name": "", "type": "hotel"},
         "meals": {
-          "breakfast": {"name": "", "type": "restaurant"},
-          "lunch": {"name": "", "type": "restaurant"},
-          "dinner": {"name": "", "type": "restaurant"}
+            "breakfast": {"name": "", "type": "restaurant", "time": "9:00 AM"},
+            "lunch":     {"name": "", "type": "restaurant", "time": "1:00 PM"},
+            "dinner":    {"name": "", "type": "restaurant", "time": "7:00 PM"}
         },
         "activities": [
-          {"name": "", "type": "poi"},
-          {"name": "", "type": "poi"}
+            {"name": "", "type": "poi", "time": "10:30 AM"},
+            {"name": "", "type": "poi", "time": "2:30 PM"}
         ],
         "why_these": "<=120 characters>"
       }
@@ -97,6 +97,11 @@ HARD RULES:
 - If there is at least one grounded candidate of the needed type, re-use grounded candidates to fill all days rather than leaving blanks.
 - Avoid repeating the same restaurant in consecutive meal slots when possible, but filling the itinerary is more important than avoiding repetition.
 - If dates are ambiguous, assume inclusive range and set a warning.
+- Always request culture and events tasks when they have no result yet.
+- Schedule all activities between 9:00 AM and 9:00 PM.
+- Meals are fixed: breakfast 9:00 AM, lunch 1:00 PM, dinner 7:00 PM. Each meal takes 1 hour.
+- Activities fill the remaining gaps: activity_1 at 10:30 AM, activity_2 at 2:30 PM.
+- Never schedule anything after 9:00 PM.
 
 When choosing places:
 - Prefer higher rating
@@ -134,7 +139,7 @@ def run_supervisor(
     try:
         response = _client.chat.completions.create(
             model="llama-3.3-70b-versatile",
-            max_tokens=2048,
+            max_tokens=4096,
             timeout=30,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},

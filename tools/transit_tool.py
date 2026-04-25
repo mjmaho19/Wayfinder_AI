@@ -18,19 +18,24 @@ logger = logging.getLogger(__name__)
 
 ROUTES_API_URL = "https://routes.googleapis.com/directions/v2:computeRoutes"
 API_KEY = os.getenv("ROUTES_API_KEY", "")
-
+GOOGLE_GEOCODE_URL = "https://maps.googleapis.com/maps/api/geocode/json"
+GOOGLE_API_KEY = os.getenv("GOOGLE_PLACES_API_KEY")  # reuse the same key
 
 def _geocode(place: str) -> dict | None:
-    """Convert a place name to lat/lng using Open-Meteo (free, no key)."""
+    """Convert a place name or full address to lat/lng using Google Geocoding API."""
+    if not GOOGLE_API_KEY:
+        logger.warning("[TransitTool] GOOGLE_PLACES_API_KEY not set, geocoding will fail")
+        return None
     try:
         res = requests.get(
-            "https://geocoding-api.open-meteo.com/v1/search",
-            params={"name": place, "count": 1},
+            GOOGLE_GEOCODE_URL,
+            params={"address": place, "key": GOOGLE_API_KEY},
             timeout=10,
         ).json()
-        if res.get("results"):
-            r = res["results"][0]
-            return {"latitude": r["latitude"], "longitude": r["longitude"]}
+        if res.get("status") == "OK":
+            loc = res["results"][0]["geometry"]["location"]
+            return {"latitude": loc["lat"], "longitude": loc["lng"]}
+        logger.warning(f"[TransitTool] Geocode status: {res.get('status')} for '{place}'")
     except Exception as e:
         logger.error(f"[TransitTool] Geocode error for '{place}': {e}")
     return None
