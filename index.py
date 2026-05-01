@@ -410,12 +410,38 @@ def _get_day_plan(plan: dict, day_number: int) -> dict | None:
 
 
 def _build_general_chat_context(plan: dict) -> dict:
+    sections = plan.get("sections") or {}
+    places = sections.get("places") or {}
+    place_items = places.get("items") or []
+
+    slim_place_details = []
+    for item in place_items:
+        if not isinstance(item, dict):
+            continue
+
+        item_type = _canonical_item_type(item.get("type"))
+        if item_type not in {"restaurant", "hotel", "poi", "shop", "bathroom"}:
+            continue
+
+        slim_place_details.append({
+            "name": item.get("name"),
+            "type": item_type,
+            "editorial_summary": item.get("editorial_summary"),
+            "rating": item.get("rating"),
+            "user_rating_count": item.get("user_rating_count"),
+            "price_level": item.get("price_level"),
+            "primary_type": item.get("primary_type"),
+            "address": item.get("address"),
+            "distance_mi": item.get("distance_mi"),
+        })
+
     return {
         "trip": plan.get("trip"),
         "preference_profile": plan.get("preference_profile"),
         "highlights": plan.get("highlights"),
         "warnings": plan.get("warnings"),
         "curated_itinerary": plan.get("curated_itinerary"),
+        "place_details": slim_place_details,
     }
 
 

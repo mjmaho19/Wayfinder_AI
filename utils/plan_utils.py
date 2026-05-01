@@ -103,7 +103,7 @@ def _slim_current_plan(current_plan: dict | None) -> dict | None:
 
 def _slim_tool_results(tool_results: list[dict]) -> list[dict]:
     slimmed = []
-    limits = {"restaurant": 6, "hotel": 4, "poi": 6, "shop": 3, "bathroom": 3, "other": 3}
+    limits = {"restaurant": 20, "hotel": 8, "poi": 8, "shop": 4, "bathroom": 3, "other": 3}
 
     for r in tool_results:
         tool_name = r.get("tool_name", "")
@@ -135,6 +135,7 @@ def _slim_tool_results(tool_results: list[dict]) -> list[dict]:
                         "price_level": item.get("price_level"),
                         "primary_type": item.get("primary_type"),
                         "address": item.get("address"),
+                        "editorial_summary": item.get("editorial_summary"),
                     })
 
             slimmed.append({
