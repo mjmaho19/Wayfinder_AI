@@ -999,6 +999,15 @@
 </div>
 
 <script>
+/**
+ * Wayfinder dashboard (Choice #1):
+ * - Polls /api/latest
+ * - Reads ToolResult where tool_name === "places"
+ * - Parses result_json
+ * - Groups payload.items by item.type into UI categories:
+ *     restaurant, shop, hotel, bathroom, poi
+ */
+
 const accentColors = {
   restaurant: { bg: "rgba(255,107,107,.18)", fg: "#ff6b6b" },
   shop:       { bg: "rgba(91,141,255,.18)",  fg: "#5b8dff" },
@@ -1248,6 +1257,7 @@ const MAP_MARKER_COLORS = {
 };
 
 async function updateHeaderLocation() {
+  // First try to get city from the latest submission's destination
   try {
     const res = await fetch('/api/latest');
     const data = await res.json();
@@ -1258,6 +1268,7 @@ async function updateHeaderLocation() {
     }
   } catch(e) {}
 
+  // Fall back to browser geolocation + reverse geocode
   if (!navigator.geolocation) {
     document.getElementById('header-location').textContent = 'Location unavailable';
     return;
@@ -1622,6 +1633,8 @@ async function pollLatest() {
 
     const latest = json.latest;
 
+    // If chat hasn't been bound to a submission yet, bind to the first latest we see.
+    // This keeps dashboard + chat in sync on first load.
     if (!activeSubmissionId) {
       activeSubmissionId = latest.id;
     }
@@ -1641,7 +1654,7 @@ async function pollLatest() {
     if (latest.status === 'completed') {
   stopPolling();
   }
-  
+
   } catch (err) {
     console.warn('pollLatest failed:', err);
   }
@@ -1746,10 +1759,10 @@ loadWeather();
 
 <!-- ─── CHATBOT ────────────────────────────────── -->
 <script>
+
 let chatOpen = false;
 let chatHistory = [];
-
-const welcomeShown = { value: false };
+let welcomeShown = false;
 
 function toggleChat() {
   chatOpen = !chatOpen;
@@ -1758,9 +1771,9 @@ function toggleChat() {
   panel.style.display = chatOpen ? 'flex' : 'none';
   if (backdrop) backdrop.style.display = chatOpen ? 'block' : 'none';
 
-  if (chatOpen && !welcomeShown.value) {
-    welcomeShown.value = true;
+  if (chatOpen && !welcomeShown) {
     appendMessage('assistant', "Hi! I'm Wayfinder. I can help you understand your itinerary, suggest changes, or answer questions about your destination. How can I help?");
+    welcomeShown = true;
   }
 }
 
@@ -1768,15 +1781,59 @@ function toggleChat() {
 //   toggleChat();
 // }
 
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function formatAssistantMessage(text) {
+  const escaped = escapeHtml(text);
+
+  // Split into blocks by blank lines
+  const blocks = escaped.split(/\n\s*\n/);
+
+  return blocks.map(block => {
+    const lines = block.split('\n').map(line => line.trim()).filter(Boolean);
+
+    // Bullet list
+    if (lines.every(line => /^[-*•]\s+/.test(line))) {
+      const items = lines.map(line => `<li>${line.replace(/^[-*•]\s+/, '')}</li>`).join('');
+      return `<ul style="margin:0; padding-left:18px;">${items}</ul>`;
+    }
+
+    // Numbered list
+    if (lines.every(line => /^\d+\.\s+/.test(line))) {
+      const items = lines.map(line => `<li>${line.replace(/^\d+\.\s+/, '')}</li>`).join('');
+      return `<ol style="margin:0; padding-left:18px;">${items}</ol>`;
+    }
+
+    // Default paragraph block
+    return `<p style="margin:0; white-space:pre-wrap;">${lines.join('<br>')}</p>`;
+  }).join('');
+}
+
 function appendMessage(role, text) {
   const el = document.createElement('div');
   el.style.cssText = `
-    padding:10px 13px;border-radius:10px;font-size:13px;line-height:1.5;max-width:88%;
+    padding:10px 13px;
+    border-radius:10px;
+    font-size:14px;
+    line-height:1.65;
+    max-width:88%;
+    white-space:normal;
     ${role === 'user'
       ? 'background:#5b8dff;color:#fff;align-self:flex-end;'
       : 'background:#1e1e23;color:#e8e8ec;align-self:flex-start;border:1px solid rgba(255,255,255,0.07);'}
   `;
-  el.textContent = text;
+
+  if (role === 'assistant') {
+    el.innerHTML = formatAssistantMessage(text);
+  } else {
+    el.textContent = text;
+  }
+
   document.getElementById('chat-messages').appendChild(el);
   document.getElementById('chat-messages').scrollTop = 999999;
 }
@@ -1790,6 +1847,7 @@ async function sendChat() {
   appendMessage('user', text);
   chatHistory.push({ role: 'user', content: text });
 
+  // Get current plan context
   let planContext = '';
   try {
     const res = await fetch('/api/latest');
@@ -1810,7 +1868,24 @@ async function sendChat() {
       body: JSON.stringify({ messages: chatHistory, plan_context: planContext })
     });
     const data = await res.json();
-    thinking.textContent = data.reply;
+
+    const formattedBubble = document.createElement('div');
+    formattedBubble.style.cssText = `
+      padding:10px 13px;
+      border-radius:10px;
+      font-size:13px;
+      line-height:1.6;
+      max-width:88%;
+      white-space:normal;
+      background:#1e1e23;
+      color:#e8e8ec;
+      align-self:flex-start;
+      border:1px solid rgba(255,255,255,0.07);
+    `;
+
+    formattedBubble.innerHTML = formatAssistantMessage(data.reply);
+    thinking.replaceWith(formattedBubble);
+
     chatHistory.push({ role: 'assistant', content: data.reply });
   } catch(e) {
     thinking.textContent = 'Something went wrong. Try again.';

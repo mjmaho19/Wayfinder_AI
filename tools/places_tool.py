@@ -146,7 +146,7 @@ def run(submission, task_input: dict | None = None) -> dict[str, Any]:
 
     for item_type, q in queries:
         try:
-            places = _search_text(q, center=center, max_results=5)
+            places = _search_text(q, center=center, max_results=20)
             for p in places:
                 items.append(_to_item(p, item_type=item_type, center=center))
         except Exception as e:
