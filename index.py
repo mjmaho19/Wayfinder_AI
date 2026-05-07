@@ -134,6 +134,19 @@ class PlanEdit(db.Model):
 
 
 def _canonicalize_plan_item_types(plan: dict | None) -> dict | None:
+    """
+    Normalize itinerary item types in a trip plan.
+
+    Forces lodging items to use the "hotel" type, meal items to use the
+    "restaurant" type, and activity items to use the "poi" type.
+
+    Args:
+        plan: Trip plan dictionary to normalize.
+
+    Returns:
+        A copied and updated plan dictionary, or the original value if it is
+        not a dictionary.
+    """
     if not isinstance(plan, dict):
         return plan
 
@@ -178,6 +191,19 @@ def _canonicalize_plan_item_types(plan: dict | None) -> dict | None:
 
 
 def _clean_destination_text(value: str | None) -> str | None:
+    """
+    Clean a destination string from a chat-based edit request.
+
+    Removes common leading phrases such as "a trip to", "trip to", or "to",
+    as well as trailing punctuation and the word "instead".
+
+    Args:
+        value: Raw destination text from the user or edit payload.
+
+    Returns:
+        A cleaned destination string, None if the result is empty, or the
+        original value if no value was provided.
+    """
     if not value:
         return value
 
@@ -195,6 +221,20 @@ def _clean_destination_text(value: str | None) -> str | None:
 
 
 def _get_current_slot_item(day_plan: dict, slot: str) -> dict:
+    """
+    Get the current itinerary item for a specific day and slot.
+
+    Supports lodging, meal slots, and the first or second activity slot.
+
+    Args:
+        day_plan: Dictionary representing one day of the itinerary.
+        slot: Slot name such as "lodging", "breakfast", "lunch",
+            "dinner", "activity_1", or "activity_2".
+
+    Returns:
+        A dictionary containing the current item's name and type. If the
+        slot or item is missing, returns empty default values.
+    """
     if not isinstance(day_plan, dict):
         return {"name": "", "type": ""}
 
@@ -232,6 +272,18 @@ def _get_current_slot_item(day_plan: dict, slot: str) -> dict:
 
 
 def _normalize_plan(plan_dict: dict | None) -> dict | None:
+    """
+    Normalize the structure of a trip plan dictionary.
+
+    Ensures the plan has matching "itinerary" and "curated_itinerary" fields,
+    initializes missing sections, and canonicalizes itinerary item types.
+
+    Args:
+        plan_dict: Trip plan dictionary to normalize.
+
+    Returns:
+        A normalized trip plan dictionary, or None if the input is invalid.
+    """
     if not isinstance(plan_dict, dict):
         return None
 
@@ -254,6 +306,18 @@ def _normalize_plan(plan_dict: dict | None) -> dict | None:
 
 
 def _extract_day_number(user_message: str) -> int | None:
+    """
+    Extract a day number from a user message.
+
+    Looks for text in the format "day N", such as "day 2".
+
+    Args:
+        user_message: Message text from the user.
+
+    Returns:
+        The extracted day number as an integer, or None if no day number
+        is found.
+    """
     m = re.search(r"\bday\s+(\d+)\b", user_message, flags=re.IGNORECASE)
     if not m:
         return None
@@ -264,6 +328,19 @@ def _extract_day_number(user_message: str) -> int | None:
 
 
 def _detect_specific_edit_request(user_message: str) -> dict | None:
+    """
+    Detect whether a user message is asking for a specific itinerary edit.
+
+    Looks for edit-related words, a day number, and a target slot such as
+    lodging, a meal, or an activity.
+
+    Args:
+        user_message: Message text from the user.
+
+    Returns:
+        A structured edit request dictionary if a specific edit is detected,
+        otherwise None.
+    """
     text = (user_message or "").strip().lower()
     if not text:
         return None
@@ -326,6 +403,20 @@ def _detect_specific_edit_request(user_message: str) -> dict | None:
 
 
 def _candidate_matches_user_request(item: dict, user_message: str) -> bool:
+    """
+    Check whether a candidate place matches the user's requested preferences.
+
+    Compares soft keywords from the user message, such as cuisine, budget,
+    or activity type, against the candidate place metadata.
+
+    Args:
+        item: Place result dictionary.
+        user_message: User's edit request or preference message.
+
+    Returns:
+        True if the candidate place matches the request, or if no specific
+        soft keyword was requested. Otherwise, False.
+    """
     text = (user_message or "").lower()
 
     haystack_parts = [
@@ -350,6 +441,22 @@ def _candidate_matches_user_request(item: dict, user_message: str) -> bool:
 
 
 def _get_candidate_places(plan: dict, edit_request: dict, limit: int = 8) -> list[dict]:
+    """
+    Get candidate replacement places for a specific itinerary edit.
+
+    Filters places from the plan by item type, removes the current item,
+    applies user preference matching, sorts the candidates, and returns a
+    compact list of place details.
+
+    Args:
+        plan: Current trip plan dictionary.
+        edit_request: Structured edit request dictionary.
+        limit: Maximum number of candidate places to return.
+
+    Returns:
+        A list of compact candidate place dictionaries.
+    """
+
     sections = plan.get("sections") or {}
     places = sections.get("places") or {}
     items = places.get("items") or []
@@ -403,6 +510,16 @@ def _get_candidate_places(plan: dict, edit_request: dict, limit: int = 8) -> lis
 
 
 def _get_day_plan(plan: dict, day_number: int) -> dict | None:
+    """
+    Retrieve one day from the trip itinerary.
+
+    Args:
+        plan: Current trip plan dictionary.
+        day_number: Day number to look up.
+
+    Returns:
+        The matching day plan dictionary, or None if the day is not found.
+    """
     for day in plan.get("curated_itinerary", []):
         if day.get("day") == day_number:
             return day
@@ -410,6 +527,19 @@ def _get_day_plan(plan: dict, day_number: int) -> dict | None:
 
 
 def _build_general_chat_context(plan: dict) -> dict:
+    """
+    Build a compact plan context for general chat responses.
+
+    Includes the trip overview, preferences, highlights, warnings, itinerary,
+    and slimmed-down place details for use by the chat agent.
+
+    Args:
+        plan: Current trip plan dictionary.
+
+    Returns:
+        A compact dictionary containing the information needed for general
+        itinerary chat.
+    """
     sections = plan.get("sections") or {}
     places = sections.get("places") or {}
     place_items = places.get("items") or []
@@ -446,6 +576,20 @@ def _build_general_chat_context(plan: dict) -> dict:
 
 
 def _build_specific_edit_context(plan: dict, edit_request: dict) -> dict:
+    """
+    Build a compact context for a specific itinerary edit request.
+
+    Includes the requested edit, the current item being replaced, the current
+    day plan, and candidate replacement places.
+
+    Args:
+        plan: Current trip plan dictionary.
+        edit_request: Structured edit request dictionary.
+
+    Returns:
+        A compact dictionary containing the information needed to propose
+        a specific itinerary edit.
+    """
     day_number = edit_request["day"]
     day_plan = _get_day_plan(plan, day_number)
     current_item = _get_current_slot_item(day_plan or {}, edit_request.get("slot") or "")
@@ -470,6 +614,20 @@ def _build_specific_edit_context(plan: dict, edit_request: dict) -> dict:
     }
 
 def _validate_proposed_edit(plan: dict, proposed_edit: dict) -> tuple[bool, str]:
+    """
+    Validate a proposed itinerary edit before applying it.
+
+    Ensures the edit has a valid day, slot, item type, replacement value,
+    and that the replacement is grounded in the allowed places from the plan.
+
+    Args:
+        plan: Current trip plan dictionary.
+        proposed_edit: Proposed edit dictionary returned by the chat agent.
+
+    Returns:
+        A tuple containing a boolean success value and an error message.
+        If validation succeeds, the error message is an empty string.
+    """
     if not isinstance(proposed_edit, dict):
         return False, "Invalid proposed edit payload."
 
@@ -516,6 +674,20 @@ def _validate_proposed_edit(plan: dict, proposed_edit: dict) -> tuple[bool, str]
 
 
 def _apply_specific_edit_to_plan(plan: dict, proposed_edit: dict) -> dict:
+    """
+    Apply a validated specific edit to a trip plan.
+
+    Updates the requested lodging, meal, or activity slot in the itinerary
+    and records a warning noting that the chat edit was applied.
+
+    Args:
+        plan: Current trip plan dictionary.
+        proposed_edit: Validated edit dictionary containing the day, slot,
+            item type, and replacement name.
+
+    Returns:
+        A copied and updated trip plan dictionary.
+    """
     updated = dict(plan)
     itinerary = [dict(day) for day in (updated.get("curated_itinerary") or [])]
 
@@ -569,9 +741,14 @@ def home():
 @app.route("/request", methods=["GET", "POST"])
 def request_trip():
     """
-    Main Wayfinder request route.
-    GET -> render travel form
-    POST -> store travel request + seed initial tasks, then redirect to dashboard
+    Display the trip request form or create a new trip request.
+
+    For GET requests, renders the request form. For POST requests, validates
+    the submitted trip information, creates a WayfinderSubmission, seeds the
+    initial agent tasks, and redirects to the dashboard.
+
+    Returns:
+        The rendered request page or a redirect response.
     """
     if request.method == "POST":
         traveler_name = (request.form.get("traveler_name") or "").strip()
@@ -643,6 +820,17 @@ def dashboard():
 
 @app.route("/api/weather", methods=["GET"])
 def weather():
+    """
+    Return current and daily weather data for the latest trip destination.
+
+    Uses the latest WayfinderSubmission destination, geocodes it with
+    Open-Meteo, and fetches a seven-day forecast. Falls back to New York
+    if no destination is available or geocoding fails.
+
+    Returns:
+        A JSON response containing the resolved location, current weather,
+        and daily forecast data.
+    """
     import requests as req
 
     latest = WayfinderSubmission.query.order_by(
@@ -684,6 +872,16 @@ def weather():
 
 @app.route("/api/chat", methods=["POST"])
 def chat():
+    """
+    Handle chat messages and itinerary edit requests.
+
+    Loads the relevant trip submission and plan, detects whether the user is
+    asking a general question, requesting a full trip rebuild, or applying a
+    specific itinerary edit. Saves chat interactions as PlanEdit records.
+
+    Returns:
+        A JSON response containing the assistant reply and any edit metadata.
+    """
     from agents.chat_agent import chat_with_plan
 
     data = request.get_json() or {}
@@ -920,6 +1118,16 @@ def chat():
 
 @app.route("/api/latest", methods=["GET"])
 def api_latest():
+    """
+     Return the latest trip submission and related planning data.
+
+     Includes the latest submission details, agent tasks, current trip plan,
+     and saved tool results for dashboard polling.
+
+     Returns:
+         A JSON response containing the latest trip state, or None if no
+         submission exists yet.
+     """
     latest = WayfinderSubmission.query.order_by(WayfinderSubmission.created_at.desc()).first()
     if not latest:
         return jsonify({"ok": True, "latest": None})
@@ -963,6 +1171,16 @@ def api_latest():
 
 @app.route("/api/transit", methods=["GET"])
 def transit():
+    """
+    Return transit route options for a requested origin and destination.
+
+    Reads origin, destination, and mode from query parameters and passes them
+    to the transit search tool.
+
+    Returns:
+        A JSON response containing transit routes, or an error response if
+        origin or destination is missing.
+    """
     from tools.transit_tool import search
     origin = request.args.get("origin", "")
     destination = request.args.get("destination", "")

@@ -15,6 +15,17 @@ RESEND_SEND_URL = "https://api.resend.com/emails"
 
 
 def _validate_config() -> tuple[bool, str | None]:
+    """
+    Validate the email notification configuration.
+
+    Checks whether email sending is enabled and whether the required Resend
+    settings are available.
+
+    Returns:
+        A tuple containing a boolean success value and an optional error
+        message. If validation succeeds, the error message is None.
+    """
+
     if not EMAIL_ENABLED:
         return False, "EMAIL_ENABLED is false"
 
@@ -34,6 +45,24 @@ def send_email(
     text: str | None = None,
     reply_to: str | None = None,
 ) -> dict[str, Any]:
+    """
+    Send an email through the Resend API.
+
+    Validates the email configuration, builds the Resend request payload,
+    sends the email, and returns a structured status dictionary describing
+    whether the message was sent, skipped, or failed.
+
+    Args:
+        to_email: Recipient email address.
+        subject: Email subject line.
+        html: HTML body content for the email.
+        text: Optional plain-text body content for the email.
+        reply_to: Optional reply-to email address.
+
+    Returns:
+        A dictionary containing the send status, recipient, subject, and
+        provider response details when available.
+    """
     ok, error = _validate_config()
     if not ok:
         return {

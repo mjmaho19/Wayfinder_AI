@@ -118,6 +118,26 @@ def run_supervisor(
     tool_results: list[dict],
     current_plan: dict | None,
 ) -> dict:
+    """
+    Generate or update a trip plan using the AI supervisor.
+
+    Builds a compact planning context from the traveler submission, available
+    tool results, and the current saved plan. Sends that context to the Groq
+    model, parses the JSON decision, validates itinerary grounding, stores
+    full tool payloads in the plan sections, and records missing tools.
+
+    Args:
+        submission: Dictionary containing traveler details and optional edit
+            request data.
+        tool_results: List of tool result dictionaries already collected for
+            the submission.
+        current_plan: Current saved trip plan dictionary, or None if no plan
+            exists yet.
+
+    Returns:
+        A supervisor decision dictionary containing status, summary,
+        new_tasks, and plan data.
+    """
 
     slim_results = _slim_tool_results(tool_results)
     current_plan = _slim_current_plan(current_plan)
@@ -190,6 +210,24 @@ def run_supervisor(
 
 
 def _fallback(submission: dict, tool_results: list[dict], error_msg: str) -> dict:
+    """
+    Build a safe fallback supervisor response when the AI call fails.
+
+    Checks which required tools already have results, creates new tasks for
+    any missing tools, and returns a basic processing or completed response
+    using the available submission and tool result data.
+
+    Args:
+        submission: Dictionary containing traveler details.
+        tool_results: List of tool result dictionaries already collected for
+            the submission.
+        error_msg: Error message explaining why the normal supervisor path
+            failed.
+
+    Returns:
+        A fallback supervisor decision dictionary containing status, summary,
+        new_tasks, and basic plan data.
+    """
     results = _index_results(tool_results)
     missing = [t for t in REQUIRED_TOOLS if t not in results]
 

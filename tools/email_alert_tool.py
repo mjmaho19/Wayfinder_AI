@@ -9,6 +9,19 @@ from notifications.notify import send_email
 
 
 def _build_subject(destination: str, alerts: list[dict[str, Any]]) -> str:
+    """
+    Build the email subject line for a travel alert message.
+
+    Uses a stronger alert subject when any alert has high or medium severity.
+    Otherwise, returns a general Wayfinder update subject.
+
+    Args:
+        destination: Destination connected to the alerts.
+        alerts: List of alert dictionaries.
+
+    Returns:
+        A subject line string for the email.
+    """
     severe = [a for a in alerts if a.get("severity") in {"high", "medium"}]
     if severe:
         return f"Wayfinder travel alert for {destination}"
@@ -16,6 +29,21 @@ def _build_subject(destination: str, alerts: list[dict[str, Any]]) -> str:
 
 
 def _build_text_body(destination: str, traveler_name: str, alerts: list[dict[str, Any]]) -> str:
+    """
+    Build the plain-text body for a travel alert email.
+
+    Formats up to five alerts with severity, title, summary, source,
+    published date, and article URL when available.
+
+    Args:
+        destination: Destination connected to the alerts.
+        traveler_name: Name of the traveler receiving the email.
+        alerts: List of alert dictionaries.
+
+    Returns:
+        A plain-text email body string.
+    """
+
     lines = [
         f"Hello {traveler_name or 'traveler'},",
         "",
@@ -43,6 +71,20 @@ def _build_text_body(destination: str, traveler_name: str, alerts: list[dict[str
 
 
 def _build_html_body(destination: str, traveler_name: str, alerts: list[dict[str, Any]]) -> str:
+    """
+    Build the HTML body for a travel alert email.
+
+    Formats up to five alerts as an HTML list and escapes dynamic content
+    before inserting it into the message.
+
+    Args:
+        destination: Destination connected to the alerts.
+        traveler_name: Name of the traveler receiving the email.
+        alerts: List of alert dictionaries.
+
+    Returns:
+        An HTML email body string.
+    """
     items = []
 
     for alert in alerts[:5]:
@@ -81,6 +123,22 @@ def _build_html_body(destination: str, traveler_name: str, alerts: list[dict[str
 
 
 def run(submission: Any, task_input: dict[str, Any] | None) -> dict[str, Any]:
+    """
+    Send a travel alert email for a trip submission.
+
+    Reads the destination, traveler name, email address, and alerts from the
+    submission and task input. Skips sending if no recipient email or alerts
+    are available. Otherwise, builds the email subject and body, sends the
+    message, and returns the email result.
+
+    Args:
+        submission: Submission object containing trip and traveler details.
+        task_input: Optional task data containing an email address and alerts.
+
+    Returns:
+        A dictionary describing the email alert task result, including whether
+        it was skipped or sent.
+    """
     task_input = task_input or {}
 
     destination = getattr(submission, "desired_destination", "") or ""

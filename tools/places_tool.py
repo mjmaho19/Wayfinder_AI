@@ -12,6 +12,22 @@ PLACES_TEXTSEARCH_URL = "https://places.googleapis.com/v1/places:searchText"
 
 
 def _haversine_miles(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """
+    Calculate the straight-line distance between two latitude and longitude points.
+
+    Uses the haversine formula to estimate distance in miles. This is useful
+    for displaying approximate distance from the destination center, but it
+    is not the same as driving, walking, or transit distance.
+
+    Args:
+        lat1: Latitude of the first point.
+        lon1: Longitude of the first point.
+        lat2: Latitude of the second point.
+        lon2: Longitude of the second point.
+
+    Returns:
+        Approximate distance between the two points in miles.
+    """
     # simple distance for UI; not exact routing distance
     r = 3958.7613  # miles
     phi1 = math.radians(lat1)
@@ -23,6 +39,20 @@ def _haversine_miles(lat1: float, lon1: float, lat2: float, lon2: float) -> floa
 
 
 def _geocode_center(destination: str) -> dict[str, Any] | None:
+    """
+    Geocode a destination into a latitude and longitude center point.
+
+    Uses the Google Geocoding API to find the approximate center of the
+    destination. If the API key is missing or the destination cannot be
+    geocoded, returns None.
+
+    Args:
+        destination: Destination name, city, region, or address.
+
+    Returns:
+        A dictionary containing "lat" and "lng" values, or None if no center
+        point is available.
+    """
     # lightweight geocode using Google Geocoding API (optional)
     # If you don’t want this yet, return None and we won’t compute distances.
     key = GOOGLE_PLACES_API_KEY
@@ -39,6 +69,26 @@ def _geocode_center(destination: str) -> dict[str, Any] | None:
 
 
 def _search_text(query: str, center: dict[str, float] | None, max_results: int = 6) -> list[dict[str, Any]]:
+    """
+    Search Google Places using a text query.
+
+    Sends a Places API v1 text search request, optionally biased around the
+    destination center point, and requests only the fields needed by the
+    planner and dashboard.
+
+    Args:
+        query: Search phrase to send to Google Places.
+        center: Optional latitude and longitude dictionary used to bias
+            results near the destination.
+        max_results: Maximum number of places to request.
+
+    Returns:
+        A list of raw Google Places result dictionaries.
+
+    Raises:
+        RuntimeError: If GOOGLE_PLACES_API_KEY is not configured.
+        requests.HTTPError: If the Google Places request fails.
+    """
     if not GOOGLE_PLACES_API_KEY:
         raise RuntimeError("GOOGLE_PLACES_API_KEY is not set")
 
@@ -82,6 +132,21 @@ def _search_text(query: str, center: dict[str, float] | None, max_results: int =
 
 
 def _to_item(p: dict[str, Any], item_type: str, center: dict[str, float] | None) -> dict[str, Any]:
+    """
+    Convert a raw Google Places result into a normalized place item.
+
+    Extracts display name, rating, review count, price level, editorial
+    summary, place type, address, location, distance from center, and icon.
+
+    Args:
+        p: Raw Google Places result dictionary.
+        item_type: Wayfinder category for the place, such as "restaurant",
+            "shop", "hotel", "bathroom", or "poi".
+        center: Optional destination center point used to calculate distance.
+
+    Returns:
+        A normalized place item dictionary for storage and display.
+    """
     name = (p.get("displayName") or {}).get("text") or "Unknown"
     rating = p.get("rating")
     user_rating_count = p.get("userRatingCount")
@@ -124,6 +189,22 @@ def _to_item(p: dict[str, Any], item_type: str, center: dict[str, float] | None)
 
 
 def run(submission, task_input: dict | None = None) -> dict[str, Any]:
+    """
+    Fetch destination place recommendations from Google Places.
+
+    Searches for restaurants, shopping, hotels, public restrooms, and top
+    attractions near the submission destination. Each result is normalized
+    into a Wayfinder place item. If one category fails, an error item is added
+    while the rest of the tool continues running.
+
+    Args:
+        submission: Submission object containing the desired destination.
+        task_input: Optional task input dictionary saved with the tool result.
+
+    Returns:
+        A dictionary containing the places category, destination, center point,
+        normalized place items, task input, and source name.
+    """
     destination = submission.desired_destination or "Unknown destination"
 
     # Try to get a center point (optional). If this fails, we still proceed without distance.

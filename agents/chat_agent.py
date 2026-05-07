@@ -129,6 +129,18 @@ Rules:
 
 
 def _strip_fences(text: str) -> str:
+    """
+    Remove markdown code fences from a text response.
+
+    This is mainly used when the model returns JSON inside triple backticks,
+    such as ```json ... ```.
+
+    Args:
+        text: Raw text returned by the model.
+
+    Returns:
+        The cleaned text with markdown fences removed when present.
+    """
     clean = (text or "").strip()
     if clean.startswith("```"):
         parts = clean.split("```")
@@ -141,6 +153,18 @@ def _strip_fences(text: str) -> str:
 
 
 def _try_parse_json(text: str) -> dict[str, Any] | None:
+    """
+    Safely parse a JSON string into a dictionary.
+
+    Removes markdown code fences before parsing so model responses wrapped in
+    JSON code blocks can still be handled.
+
+    Args:
+        text: Raw JSON-like text to parse.
+
+    Returns:
+        A parsed dictionary if parsing succeeds, otherwise None.
+    """
     try:
         return json.loads(_strip_fences(text))
     except Exception:
@@ -148,6 +172,20 @@ def _try_parse_json(text: str) -> dict[str, Any] | None:
 
 
 def _latest_user_message(messages: list[dict]) -> list[dict]:
+    """
+    Get the latest user message from a chat history.
+
+    Searches the message list from newest to oldest and returns the most
+    recent message with the role "user".
+
+    Args:
+        messages: List of chat message dictionaries.
+
+    Returns:
+        A one-item list containing the latest user message. If no user message
+        is found, returns the last message in the list, or an empty list if
+        there are no messages.
+    """
     for m in reversed(messages):
         if m.get("role") == "user":
             return [{"role": "user", "content": m.get("content", "")}]
@@ -155,6 +193,19 @@ def _latest_user_message(messages: list[dict]) -> list[dict]:
 
 
 def _looks_like_itinerary_question(text: str) -> bool:
+    """
+    Check whether a message is asking to see the current itinerary.
+
+    Looks for direct itinerary-related phrases or combinations of words that
+    suggest the user wants the current trip plan.
+
+    Args:
+        text: User message text.
+
+    Returns:
+        True if the message appears to ask for the itinerary or trip plan,
+        otherwise False.
+    """
     t = (text or "").strip().lower()
     if not t:
         return False
@@ -188,6 +239,19 @@ def _looks_like_itinerary_question(text: str) -> bool:
 
 
 def _safe_name(value: Any) -> str:
+    """
+    Safely extract a display name from an itinerary item.
+
+    Handles itinerary values that may be dictionaries, strings, empty values,
+    or missing values.
+
+    Args:
+        value: Itinerary item value to convert into display text.
+
+    Returns:
+        The item's name, the string value, or "Not planned yet." if no usable
+        name is available.
+    """
     if isinstance(value, dict):
         return str(value.get("name") or "Not planned yet.")
     if isinstance(value, str) and value.strip():
@@ -196,6 +260,19 @@ def _safe_name(value: Any) -> str:
 
 
 def _format_plan_for_chat(plan_context: str) -> str:
+    """
+    Format a trip plan into readable plain text for the chat response.
+
+    Converts the stored JSON trip context into a structured trip overview and
+    day-by-day itinerary using the expected Wayfinder chat format.
+
+    Args:
+        plan_context: JSON string containing the current trip context.
+
+    Returns:
+        A formatted itinerary string, or an empty string if the plan context
+        cannot be parsed.
+    """
     try:
         plan = json.loads(plan_context)
     except Exception:
@@ -258,11 +335,21 @@ def chat_with_plan(
     structured_edit: bool = False,
 ) -> dict[str, Any]:
     """
+    Send a chat request to the travel assistant using the current trip context.
+
+    Handles both general itinerary chat and structured itinerary edit requests.
+    For itinerary summary questions, this function may format and return the
+    stored plan directly without calling the model.
+
+    Args:
+        messages: List of chat message dictionaries from the user interface.
+        plan_context: JSON string containing the current trip context.
+        structured_edit: Whether the request should use the structured edit
+            prompt and return a proposed itinerary edit.
+
     Returns:
-    {
-      "reply": str,
-      "proposed_edit": dict | None
-    }
+        A dictionary containing the assistant reply and an optional
+        proposed_edit dictionary.
     """
     system = EDIT_PROMPT if structured_edit else SYSTEM_PROMPT
 

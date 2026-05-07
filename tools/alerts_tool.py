@@ -102,16 +102,46 @@ CATEGORY_KEYWORDS = {
 
 
 def _utc_now() -> datetime:
+    """
+    Get the current UTC datetime.
+
+    Returns:
+        The current timezone-aware datetime in UTC.
+    """
     return datetime.now(timezone.utc)
 
 
 def _safe_text(value: Any) -> str:
+    """
+    Convert a value into safe stripped text.
+
+    Handles None values by returning an empty string.
+
+    Args:
+        value: Value to convert into text.
+
+    Returns:
+        A stripped string version of the value, or an empty string if the
+        value is None.
+    """
     if value is None:
         return ""
     return str(value).strip()
 
 
 def _build_query(destination: str) -> str:
+    """
+    Build the News API search query for a destination.
+
+    Combines the destination with travel disruption, safety, weather, and
+    advisory terms so the alerts tool can find relevant news.
+
+    Args:
+        destination: Destination city, region, or country.
+
+    Returns:
+        A formatted News API query string.
+    """
     return (
         f'"{destination}" AND '
         "("
@@ -123,6 +153,18 @@ def _build_query(destination: str) -> str:
 
 
 def _infer_severity(text: str) -> str:
+    """
+    Infer an alert severity level from article text.
+
+    Checks high-severity keywords first, then medium-severity keywords.
+    Defaults to low severity if no stronger keyword is found.
+
+    Args:
+        text: Article title and description text.
+
+    Returns:
+        A severity string: "high", "medium", or "low".
+    """
     text_lower = text.lower()
 
     for keyword in SEVERITY_KEYWORDS["high"]:
@@ -137,6 +179,19 @@ def _infer_severity(text: str) -> str:
 
 
 def _infer_category(text: str) -> str:
+    """
+    Infer an alert category from article text.
+
+    Compares article text against category keyword lists such as security,
+    civil unrest, transport, and weather.
+
+    Args:
+        text: Article title and description text.
+
+    Returns:
+        A category string such as "security", "civil_unrest", "transport",
+        "weather", or "general".
+    """
     text_lower = text.lower()
 
     for category, keywords in CATEGORY_KEYWORDS.items():
@@ -148,6 +203,19 @@ def _infer_category(text: str) -> str:
 
 
 def _is_relevant(article_text: str, destination: str) -> bool:
+    """
+    Determine whether a news article is relevant to the destination.
+
+    An article is considered relevant if it mentions the destination directly
+    or contains travel disruption and safety-related terms.
+
+    Args:
+        article_text: Combined article title and description text.
+        destination: Destination city, region, or country.
+
+    Returns:
+        True if the article appears relevant, otherwise False.
+    """
     text_lower = article_text.lower()
     destination_lower = destination.lower()
 
@@ -173,11 +241,44 @@ def _is_relevant(article_text: str, destination: str) -> bool:
 
 
 def _make_alert_id(title: str, source: str, published: str) -> str:
+    """
+    Create a stable alert ID for a news article.
+
+    Uses the article title, source, and published date to generate a short
+    SHA-256-based identifier.
+
+    Args:
+        title: Article title.
+        source: Article source name.
+        published: Article published timestamp.
+
+    Returns:
+        A 16-character alert identifier string.
+    """
     raw = f"{title}|{source}|{published}"
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
 
 
 def run(submission: Any, task_input: dict[str, Any] | None) -> dict[str, Any]:
+    """
+    Fetch destination-specific travel alerts from the News API.
+
+    Uses the submission destination to search for recent travel, safety,
+    transportation, weather, and advisory-related news. Filters articles for
+    relevance, infers severity and category, removes duplicates, and returns
+    an overall risk level.
+
+    Args:
+        submission: Submission object containing the desired destination.
+        task_input: Optional task settings such as lookback_days, page_size,
+            and min_severity.
+
+    Returns:
+        A dictionary containing the alert type, destination, overall risk,
+        query date, number of alerts found, and alert details. If the API key,
+        destination, or request fails, returns an error dictionary with an
+        empty alerts list.
+    """
     task_input = task_input or {}
 
     if not NEWS_API_KEY:
