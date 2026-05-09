@@ -1,11 +1,38 @@
 # Copyright Michael Mahoney
 
+"""
+plan_utils.py — Shared planning utilities for the Wayfinder supervisor pipeline.
+
+Provides helper functions used by the AI supervisor and worker to prepare,
+validate, and index trip planning data. Responsibilities include:
+
+- Stripping markdown fences from raw model output
+- Slimming tool results and current plans before sending to the model
+- Canonicalizing place type strings for consistent categorization
+- Sorting place candidates by rating, popularity, and distance
+- Validating itinerary grounding against real places tool results
+- Indexing and extracting tool payloads from raw worker result rows
+"""
+
 from __future__ import annotations
 
 import json
 
 
 def _safe_json_loads(value):
+    """
+    Attempt to parse a value as JSON, returning None on any failure.
+
+    Passes through dictionaries unchanged. Returns None for non-string
+    inputs, empty strings, and any value that raises a JSON parse error.
+
+    Args:
+        value: The value to parse. May be a dict, string, or any other type.
+
+    Returns:
+        A parsed Python object if ``value`` is a valid JSON string, the
+        original dict if ``value`` is already a dict, or ``None`` otherwise.
+    """
     if isinstance(value, dict):
         return value
     if not isinstance(value, str) or not value.strip():
@@ -17,6 +44,22 @@ def _safe_json_loads(value):
 
 
 def _canonical_item_type(value: str | None) -> str:
+    """
+    Normalize a raw place type string into a canonical category.
+
+    Maps the many specific type strings returned by the Places API
+    (e.g. ``"italian_restaurant"``, ``"resort_hotel"``) into one of
+    the broader categories used internally: ``"hotel"``, ``"restaurant"``,
+    ``"poi"``, ``"shop"``, or ``"bathroom"``. Unrecognized types are
+    returned as-is after lowercasing and stripping whitespace.
+
+    Args:
+        value: A raw place type string, or ``None``.
+
+    Returns:
+        A canonical category string. Returns the cleaned input unchanged
+        if it does not match any known category.
+    """
     t = (value or "").strip().lower()
 
     if t in {"hotel", "hostel", "motel", "inn", "lodging", "resort_hotel"}:
@@ -46,6 +89,22 @@ def _canonical_item_type(value: str | None) -> str:
 
 
 def _sort_place_candidates(item: dict) -> tuple:
+    """
+    Produce a sort key for ranking place candidates.
+
+    Ranks places by rating (descending), user rating count (descending),
+    and distance in miles (ascending), matching the supervisor's preference
+    rules. Missing or non-numeric values fall back to neutral defaults so
+    that incomplete records sort toward the bottom without raising errors.
+
+    Args:
+        item: A place dictionary that may contain ``rating``,
+            ``user_rating_count``, and ``distance_mi`` keys.
+
+    Returns:
+        A tuple ``(-rating, -count, distance)`` suitable for use as a
+        ``key`` argument to ``sorted()``.
+    """
     rating = item.get("rating")
     count = item.get("user_rating_count")
     dist = item.get("distance_mi")
@@ -70,6 +129,22 @@ def _strip_fences(raw: str) -> str:
 
 
 def _get_tool_payload(result: dict):
+    """
+    Extract the usable payload from a tool result dictionary.
+
+    Checks for a pre-parsed ``payload`` key first, then falls back to
+    parsing the ``result_json`` string. If parsing fails, returns a
+    truncated raw snippet under a ``_raw`` key so callers always receive
+    a dictionary.
+
+    Args:
+        result: A tool result dictionary from the worker, which may contain
+            a ``payload`` dict or a ``result_json`` string.
+
+    Returns:
+        The extracted payload as a dictionary. Returns an empty dictionary
+        if neither key is present or both are empty.
+    """
     payload = result.get("payload")
     if payload is not None:
         return payload
@@ -85,6 +160,24 @@ def _get_tool_payload(result: dict):
 
 
 def _slim_current_plan(current_plan: dict | None) -> dict | None:
+    """
+    Reduce the current plan to only the fields the supervisor needs.
+
+    Strips large or rendering-only data (such as ``sections``) before
+    the plan is included in the supervisor's context window, keeping
+    token usage low without losing planning-relevant information.
+
+    Args:
+        current_plan: The full saved plan dictionary, which may be a raw
+            plan dict or a wrapper dict with a nested ``plan`` key.
+            Pass ``None`` if no plan exists yet.
+
+    Returns:
+        A slimmed dictionary containing only ``trip``, ``preference_profile``,
+        ``curated_itinerary``, ``highlights``, ``warnings``,
+        ``estimated_cost``, and ``meta``. Returns ``None`` if
+        ``current_plan`` is not a dictionary.
+    """
     if not isinstance(current_plan, dict):
         return None
 
@@ -102,6 +195,24 @@ def _slim_current_plan(current_plan: dict | None) -> dict | None:
 
 
 def _slim_tool_results(tool_results: list[dict]) -> list[dict]:
+    """
+    Trim tool result payloads to a compact form for the supervisor prompt.
+
+    Applies per-tool slimming logic to reduce token usage. For places
+    results, canonicalizes item types, sorts candidates by rating and
+    distance, and caps each category at a predefined limit. For weather
+    and transit results, retains only the fields the supervisor actually
+    uses. All other tool results are passed through unchanged.
+
+    Args:
+        tool_results: List of raw tool result dictionaries from the worker,
+            each containing a ``tool_name`` key and either a ``payload``
+            dict or a ``result_json`` string.
+
+    Returns:
+        A new list of slimmed tool result dictionaries in the same order,
+        with oversized payloads reduced to their most relevant fields.
+    """
     slimmed = []
     limits = {"restaurant": 20, "hotel": 8, "poi": 8, "shop": 4, "bathroom": 3, "other": 3}
 
@@ -239,6 +350,23 @@ def _validate_grounding(plan: dict, tool_results: list[dict]) -> None:
 
 
 def _index_results(tool_results: list[dict]) -> dict:
+    """
+    Build a lookup dictionary mapping tool names to their payloads.
+
+    Iterates over a list of tool result dictionaries and indexes each
+    by its ``tool_name`` key. Results without a tool name are skipped.
+    Used by the supervisor fallback to quickly check which tools have
+    already returned data.
+
+    Args:
+        tool_results: List of tool result dictionaries, each expected to
+            have a ``tool_name`` string and a parseable payload.
+
+    Returns:
+        A dictionary mapping each tool name string to its extracted
+        payload dict. If the same tool name appears more than once,
+        the last entry wins.
+    """
     out = {}
     for r in tool_results:
         name = (r.get("tool_name") or "").strip()

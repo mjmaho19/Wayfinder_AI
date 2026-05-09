@@ -1,5 +1,16 @@
 # Copyright Michael Mahoney, Edgar Falfan February 2026
 
+"""
+weather_tool.py — Open-Meteo weather fetcher for Wayfinder.
+
+Retrieves current weather conditions for a traveler's destination using
+the Open-Meteo API (no API key required). Geocodes the destination name
+to coordinates, then fetches temperature, wind speed, humidity, and a
+human-readable condition label derived from WMO weather codes.
+
+Entry point for the worker pipeline: run(submission, task_input).
+"""
+
 from __future__ import annotations
 
 import requests
@@ -36,13 +47,41 @@ WMO_CODES = {
 
 
 def _condition(code: int) -> str:
+    """
+    Translate a WMO weather code into a human-readable condition string.
+
+    Args:
+        code: Integer WMO weather interpretation code returned by Open-Meteo.
+
+    Returns:
+        A descriptive condition string (e.g. "Partly Cloudy"), or a fallback
+        string with the raw code if it is not in the lookup table.
+    """
     return WMO_CODES.get(code, f"Unknown (code {code})")
 
 
 def run(submission, task_input: dict) -> dict:
     """
-    Weather tool using Open-Meteo (no API key required).
-    Returns human-readable temperature, condition, and wind speed.
+    Fetch current weather for the traveler's destination.
+
+    Geocodes the destination from the submission using the Open-Meteo
+    geocoding API, then retrieves current conditions including temperature,
+    apparent temperature, wind speed, humidity, and a WMO-based condition
+    label. No API key is required.
+
+    Args:
+        submission: WayfinderSubmission model instance. Uses the
+            ``desired_destination`` attribute as the target location.
+        task_input: Dictionary of task-specific input from the worker.
+            Not currently used but accepted for interface consistency.
+
+    Returns:
+        A dictionary with weather data including ``location``, ``country``,
+        ``latitude``, ``longitude``, ``temperature``, ``feels_like``,
+        ``condition``, ``weather_code``, ``wind_speed``, ``humidity``,
+        and ``raw`` (the unprocessed Open-Meteo current-weather object).
+        On failure, returns a dictionary with an ``error`` key and
+        the ``location`` string.
     """
 
     location = submission.desired_destination or "San Francisco"

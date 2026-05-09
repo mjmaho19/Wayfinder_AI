@@ -1000,12 +1000,22 @@
 
 <script>
 /**
- * Wayfinder dashboard (Choice #1):
- * - Polls /api/latest
- * - Reads ToolResult where tool_name === "places"
- * - Parses result_json
- * - Groups payload.items by item.type into UI categories:
- *     restaurant, shop, hotel, bathroom, poi
+ * wayfinder_dashboard.html — Wayfinder trip planning dashboard.
+ *
+ * Polls /api/latest every 3 seconds to display live trip data as the
+ * backend agent assembles it. Renders places on a dark-styled Google Map
+ * with category filter buttons, a scrollable day-by-day itinerary panel,
+ * a culture facts panel, a local events panel, a live weather widget, and
+ * an interactive transit route search. Includes a floating chat panel that
+ * connects to /api/chat for trip assistant conversations.
+ *
+ * Data flow:
+ *   /api/latest  →  applyLatestPayload()  →  per-panel render functions
+ *
+ * External dependencies:
+ *   - Google Maps JavaScript API (maps, places libraries)
+ *   - Google Fonts (Instrument Serif, DM Sans)
+ *   - Backend Flask routes: /api/latest, /api/weather, /api/transit, /api/chat
  */
 
 const accentColors = {
@@ -1050,6 +1060,13 @@ let itinDays = [];
 let activeItinDay = 0;
 
 // ---- UI helpers ----
+/**
+ * Reset the results panel to a "no submission yet" empty state.
+ *
+ * Clears all map pins, resets the results label and count, hides the
+ * column headers, deactivates all filter buttons, and clears the current
+ * active type. Called when the poll returns no submission data.
+ */
 function setEmptyState() {
   currentType = null;
   document.getElementById('pins').innerHTML = '';
@@ -1064,6 +1081,13 @@ function setEmptyState() {
   document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
 }
 
+/**
+ * Reset the results panel to a "select a category" prompt state.
+ *
+ * Similar to setEmptyState but used when a submission exists but no
+ * category filter is active. Clears pins, resets results label and count,
+ * hides column headers, and deactivates all filter buttons.
+ */
 function setSelectPromptState() {
   currentType = null;
   document.getElementById('pins').innerHTML = '';
@@ -1078,6 +1102,15 @@ function setSelectPromptState() {
   document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
 }
 
+/**
+ * Enable or disable sidebar filter buttons based on available data.
+ *
+ * Buttons for types present in enabledTypesSet are made clickable;
+ * all others are visually dimmed and set to non-interactive.
+ *
+ * @param {Set<string>} enabledTypesSet - Set of place type strings that
+ *     have at least one result (e.g. new Set(['restaurant', 'hotel'])).
+ */
 function setButtonsEnabled(enabledTypesSet) {
   document.querySelectorAll('.filter-btn').forEach(btn => {
     const t = btn.dataset.type;
@@ -1089,6 +1122,16 @@ function setButtonsEnabled(enabledTypesSet) {
 }
 
 // ---- Rendering ----
+/**
+ * Build a star rating string from a numeric rating value.
+ *
+ * Rounds the rating to the nearest integer, produces that many filled
+ * stars followed by empty stars to reach five total, and appends the
+ * raw numeric value. Returns an empty string for non-finite inputs.
+ *
+ * @param {number|string} rating - Numeric rating value (0–5 scale).
+ * @returns {string} Star string such as "★★★★☆ 3.8", or "" if invalid.
+ */
 function starsHTML(rating) {
   const r = Number(rating);
   if (!Number.isFinite(r)) return '';
@@ -1096,6 +1139,16 @@ function starsHTML(rating) {
   return '★'.repeat(full) + '☆'.repeat(5-full) + ` ${r}`;
 }
 
+/**
+ * Format a place item's distance into a display string.
+ *
+ * Checks for a pre-formatted dist field first, then falls back to the
+ * numeric distance_mi field, appending "mi". Returns "—" if neither
+ * field contains a usable value.
+ *
+ * @param {Object} item - A normalized place item object.
+ * @returns {string} A distance string such as "1.4 mi" or "—".
+ */
 function _fmtDistance(item) {
   if (item.dist) return item.dist;
   const dm = item.distance_mi;
@@ -1104,6 +1157,18 @@ function _fmtDistance(item) {
   return '—';
 }
 
+/**
+ * Normalize a raw place item into a consistent shape for UI rendering.
+ *
+ * Fills in default values for name, sub-label, icon, distance string,
+ * and price format based on the item's type. Operates on a shallow copy
+ * so the original item is not mutated.
+ *
+ * @param {Object} item - Raw place item from the places payload.
+ * @param {string} type - Canonical type string: 'restaurant', 'shop',
+ *     'hotel', 'bathroom', or 'poi'.
+ * @returns {Object} A new item object with all display fields populated.
+ */
 function _normalizeForUI(item, type) {
   const out = { ...item };
   out.name = out.name ?? 'Unknown';
@@ -1132,6 +1197,18 @@ function _normalizeForUI(item, type) {
   return out;
 }
 
+/**
+ * Build a result card DOM element for a single place item.
+ *
+ * Applies the accent color for the given type, assembles type-specific
+ * right-side metadata (rating, price, distance), and adds a fade-in
+ * animation with a small random delay to stagger card appearance.
+ *
+ * @param {Object} item - A normalized place item from _normalizeForUI().
+ * @param {string} type - Canonical type string used to pick colors and
+ *     decide which metadata fields to display.
+ * @returns {HTMLElement} A div.card element ready to append to the list.
+ */
 function renderCard(item, type) {
   const c = accentColors[type];
   const card = document.createElement('div');
@@ -1190,11 +1267,27 @@ const WMO_ICON = {
 
 let weatherExpanded = false;
 
+/**
+ * Toggle the weather widget between collapsed and expanded views.
+ *
+ * The collapsed view shows the icon, temperature, and condition label.
+ * The expanded view additionally shows wind speed, humidity, and a
+ * multi-day forecast strip.
+ */
 function toggleWeather() {
   weatherExpanded = !weatherExpanded;
   document.getElementById('weather-expanded').style.display = weatherExpanded ? 'block' : 'none';
 }
 
+/**
+ * Fetch weather data from /api/weather and populate the weather widget.
+ *
+ * Updates the icon, temperature, condition label, wind speed, humidity,
+ * and daily forecast rows in the widget. Silently returns on error or
+ * if the API response contains an error field.
+ *
+ * @returns {Promise<void>}
+ */
 async function loadWeather() {
   try {
     const res = await fetch('/api/weather');
@@ -1256,6 +1349,17 @@ const MAP_MARKER_COLORS = {
   bathroom:   '#94a3b8',
 };
 
+/**
+ * Populate the header location pill with the traveler's destination or
+ * the browser's current city.
+ *
+ * First checks /api/latest for a desired_destination on the active
+ * submission. If none is found, falls back to the browser Geolocation API
+ * and reverse-geocodes via Nominatim to get a city name. Sets "Location
+ * unavailable" if both approaches fail.
+ *
+ * @returns {Promise<void>}
+ */
 async function updateHeaderLocation() {
   // First try to get city from the latest submission's destination
   try {
@@ -1288,6 +1392,17 @@ async function updateHeaderLocation() {
   });
 }
 
+/**
+ * Initialize the Google Map and attach Places Autocomplete to transit inputs.
+ *
+ * Creates a dark-styled Google Map centered at (20, 0) with zoom 2, then
+ * attempts to locate the user via the Geolocation API and drops a blue
+ * circle marker at their position. Also attaches Places Autocomplete
+ * widgets to the transit From and To input fields. Called automatically
+ * by the Google Maps script tag callback parameter.
+ *
+ * @returns {Promise<void>}
+ */
 async function initMap() {
   const { Map } = await google.maps.importLibrary("maps");
   const loadingEl = document.getElementById('map-loading');
@@ -1339,16 +1454,41 @@ async function initMap() {
     });
 }
 
+/**
+ * Adjust the Google Map zoom level by a relative delta.
+ *
+ * @param {number} delta - Amount to add to the current zoom level.
+ *     Pass 1 to zoom in, -1 to zoom out.
+ */
 function wayfinder_mapZoom(delta) {
   if (gmap) gmap.setZoom(gmap.getZoom() + delta);
 }
 
+/**
+ * Re-center the Google Map on the trip destination or user location.
+ *
+ * Prefers the destination center derived from the places payload (zoom 14).
+ * Falls back to the browser geolocation position (zoom 13) if no map
+ * center has been set yet.
+ */
 function wayfinder_recenter() {
   if (!gmap) return;
   if (mapCenter) { gmap.setCenter(mapCenter); gmap.setZoom(14); }
   else if (userLocation) { gmap.setCenter(userLocation); gmap.setZoom(13); }
 }
 
+/**
+ * Clear existing map markers and render new ones for the given place type.
+ *
+ * Removes all currently active Google Maps markers, then iterates over
+ * the items in data[type] and places a colored circle marker for each
+ * item that has valid lat/lng coordinates. Attaches an InfoWindow to each
+ * marker showing the name, type, rating, and distance. Re-centers the map
+ * on the trip destination after placing markers.
+ *
+ * @param {string} type - Canonical place type to render pins for
+ *     (e.g. 'restaurant', 'hotel', 'poi').
+ */
 function renderPins(type) {
   activeMapMarkers.forEach(m => m.setMap(null));
   activeMapMarkers = [];
@@ -1384,6 +1524,16 @@ function renderPins(type) {
   if (mapCenter) { gmap.setCenter(mapCenter); gmap.setZoom(14); }
 }
 
+/**
+ * Update the stored map center from the places payload and pan the map.
+ *
+ * Reads center.lat and center.lng from the places payload and stores them
+ * as mapCenter. If no category filter is currently active, immediately
+ * pans and zooms the map to the new center.
+ *
+ * @param {Object|null} placesPayload - The parsed places tool payload,
+ *     expected to have a center object with lat and lng properties.
+ */
 function updateMapCenter(placesPayload) {
   if (placesPayload?.center?.lat && placesPayload?.center?.lng && gmap) {
     mapCenter = { lat: placesPayload.center.lat, lng: placesPayload.center.lng };
@@ -1394,6 +1544,17 @@ function updateMapCenter(placesPayload) {
   }
 }
 
+/**
+ * Activate a place type filter and refresh the results panel and map pins.
+ *
+ * Updates the results label, count badge, and column headers for the
+ * selected type. Renders all cards for that type into the results list,
+ * drops pins on the map, and toggles the active state on the sidebar
+ * filter buttons.
+ *
+ * @param {string} type - Canonical place type to display
+ *     (e.g. 'restaurant', 'shop', 'hotel', 'bathroom', 'poi').
+ */
 function selectType(type) {
   currentType = type;
   const items = data[type] || [];
@@ -1419,11 +1580,28 @@ function selectType(type) {
   });
 }
 
+/**
+ * Safely parse a places result JSON string into an object.
+ *
+ * @param {string} resultJson - A JSON string from a places ToolResult row.
+ * @returns {Object|null} The parsed object, or null if parsing fails.
+ */
 function parsePlacesResultJson(resultJson) {
   try { return JSON.parse(resultJson); } catch (e) { return null; }
 }
 
-// ── Main payload handler ─────────────────────────────────────────────────────
+/**
+ * Process the latest submission payload and update all dashboard panels.
+ *
+ * Resets the local data store, then iterates the submission's tool_results
+ * to find the places, culture, and events rows. Normalizes and groups
+ * place items by canonical type, enables the appropriate filter buttons,
+ * refreshes the active results list, and delegates to renderCulturePanel(),
+ * renderEventsPanel(), and renderItineraryPanel() for the remaining panels.
+ *
+ * @param {Object} latest - The latest submission object from /api/latest,
+ *     containing tool_results and plan sub-objects.
+ */
 function applyLatestPayload(latest) {
   data = { restaurant: [], shop: [], hotel: [], bathroom: [], poi: [] };
   const enabledTypes = new Set();
@@ -1469,7 +1647,15 @@ function applyLatestPayload(latest) {
   renderItineraryPanel(latest);
 }
 
-// ── Itinerary panel ──────────────────────────────────────────────────────────
+/**
+ * Populate the itinerary panel from the latest plan's curated_itinerary.
+ *
+ * Parses plan_json from the submission, builds day tab buttons, and
+ * renders the currently active day's schedule. Does nothing if no plan
+ * or itinerary data is available yet.
+ *
+ * @param {Object} latest - The latest submission object from /api/latest.
+ */
 function renderItineraryPanel(latest) {
   const planJson = latest?.plan?.plan_json;
   if (!planJson) return;
@@ -1498,6 +1684,14 @@ function renderItineraryPanel(latest) {
   renderItinDay(activeItinDay);
 }
 
+/**
+ * Switch the itinerary panel to display a different day.
+ *
+ * Updates activeItinDay, toggles the active CSS class on the day tabs,
+ * and re-renders the schedule for the selected day index.
+ *
+ * @param {number} index - Zero-based index into the itinDays array.
+ */
 function selectItinDay(index) {
   activeItinDay = index;
   document.querySelectorAll('.itin-tab').forEach((t, i) => {
@@ -1506,6 +1700,16 @@ function selectItinDay(index) {
   renderItinDay(index);
 }
 
+/**
+ * Render the time-slot schedule for a single itinerary day.
+ *
+ * Builds a fixed list of time slots (breakfast, two activities, lunch,
+ * free time, dinner, and hotel check-in) from the day object, filters
+ * out slots with no name, and injects itin-slot elements into the
+ * itinerary body container.
+ *
+ * @param {number} index - Zero-based index into the itinDays array.
+ */
 function renderItinDay(index) {
   const day = itinDays[index];
   if (!day) return;
@@ -1534,7 +1738,17 @@ function renderItinDay(index) {
     `).join('');
 }
 
-// ── Culture panel ────────────────────────────────────────────────────────────
+/**
+ * Populate the Culture & Local Life panel from a culture tool result row.
+ *
+ * Parses result_json from the culture row, renders each fact as an emoji
+ * card, updates the fact count badge, and conditionally shows a quick
+ * tips strip at the bottom of the panel. Does nothing if the row is
+ * missing or contains no facts.
+ *
+ * @param {Object|undefined} cultureRow - A tool result object where
+ *     tool_name === 'culture', or undefined if not yet available.
+ */
 function renderCulturePanel(cultureRow) {
   const body = document.getElementById('culture-body');
   const badge = document.getElementById('culture-badge');
@@ -1575,7 +1789,17 @@ function renderCulturePanel(cultureRow) {
   }
 }
 
-// ── Events panel ─────────────────────────────────────────────────────────────
+/**
+ * Populate the Local Events panel from an events tool result row.
+ *
+ * Parses result_json from the events row, renders each event as a card
+ * with name, date/time, venue, genre, price, and optional ticket link,
+ * and updates the event count badge. Shows an empty state message if
+ * no events are found.
+ *
+ * @param {Object|undefined} eventsRow - A tool result object where
+ *     tool_name === 'events', or undefined if not yet available.
+ */
 function renderEventsPanel(eventsRow) {
   const body = document.getElementById('events-body');
   const badge = document.getElementById('events-badge');
@@ -1617,7 +1841,16 @@ function renderEventsPanel(eventsRow) {
   `).join('');
 }
 
-// ── Polling ───────────────────────────────────────────────────────────────────
+/**
+ * Fetch the latest submission from /api/latest and refresh all panels.
+ *
+ * Called on an interval by startPolling(). On a new submission ID, resets
+ * map state, pin markers, and panel state before applying the new payload.
+ * Stops the polling interval automatically once the submission status
+ * reaches 'completed'. Logs warnings on network errors without crashing.
+ *
+ * @returns {Promise<void>}
+ */
 async function pollLatest() {
   try {
     const res = await fetch(`/api/latest?ts=${Date.now()}`, { cache: 'no-store' });
@@ -1679,6 +1912,14 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
 // ── Transit ───────────────────────────────────────────────────────────────────
 let transitMode = 'BUS';
 
+/**
+ * Switch the active transit mode between BUS and RAIL.
+ *
+ * Updates the transitMode state variable and adjusts the visual styles
+ * of the Bus and Train toggle buttons to reflect the active selection.
+ *
+ * @param {string} mode - Transit mode to activate: 'BUS' or 'RAIL'.
+ */
 function selectTransitMode(mode) {
   transitMode = mode;
   document.getElementById('btn-bus').style.background = mode === 'BUS' ? '#5b8dff' : '#1e1e23';
@@ -1687,6 +1928,16 @@ function selectTransitMode(mode) {
   document.getElementById('btn-rail').style.color = mode === 'RAIL' ? '#fff' : '#7c7c8a';
 }
 
+/**
+ * Search for transit routes and render the results in the transit block.
+ *
+ * Reads the From and To input values and the active transitMode, then
+ * calls /api/transit with those parameters. Renders each returned route
+ * as a card showing duration, distance, and per-step line/stop details.
+ * Displays appropriate error or empty-state messages on failure.
+ *
+ * @returns {Promise<void>}
+ */
 async function searchTransit() {
   const from = document.getElementById('transit-from').value.trim();
   const to = document.getElementById('transit-to').value.trim();
@@ -1739,11 +1990,19 @@ async function searchTransit() {
 setEmptyState();
 let pollingInterval = null;
 
+/**
+ * Start the 3-second polling interval if it is not already running.
+ * Has no effect if polling is already active.
+ */
 function startPolling() {
   if (pollingInterval) return;
   pollingInterval = setInterval(pollLatest, 3000);
 }
 
+/**
+ * Stop the polling interval and clear the interval reference.
+ * Called automatically when the submission status reaches 'completed'.
+ */
 function stopPolling() {
   if (pollingInterval) {
     clearInterval(pollingInterval);
@@ -1764,6 +2023,12 @@ let chatOpen = false;
 let chatHistory = [];
 let welcomeShown = false;
 
+/**
+ * Open or close the floating chat panel.
+ *
+ * Toggles the panel and backdrop visibility. On first open, injects a
+ * welcome message from the assistant into the chat history.
+ */
 function toggleChat() {
   chatOpen = !chatOpen;
   const panel = document.getElementById('chat-panel');
@@ -1781,6 +2046,12 @@ function toggleChat() {
 //   toggleChat();
 // }
 
+/**
+ * Escape special HTML characters in a string to prevent XSS.
+ *
+ * @param {string} str - Raw text that may contain HTML special characters.
+ * @returns {string} The escaped string safe for injection into innerHTML.
+ */
 function escapeHtml(str) {
   return str
     .replace(/&/g, '&amp;')
@@ -1788,6 +2059,16 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;');
 }
 
+/**
+ * Convert plain assistant text into formatted HTML for the chat panel.
+ *
+ * Escapes the text for safety, then splits it into blocks on blank lines
+ * and detects bullet lists, numbered lists, and plain paragraphs. Each
+ * block is converted to the appropriate HTML element.
+ *
+ * @param {string} text - Raw assistant reply text.
+ * @returns {string} An HTML string safe to assign to innerHTML.
+ */
 function formatAssistantMessage(text) {
   const escaped = escapeHtml(text);
 
@@ -1814,6 +2095,16 @@ function formatAssistantMessage(text) {
   }).join('');
 }
 
+/**
+ * Append a chat bubble to the chat message list and scroll to the bottom.
+ *
+ * User messages are rendered as plain text in an accent-colored bubble.
+ * Assistant messages are rendered via formatAssistantMessage() in a
+ * darker surface-colored bubble.
+ *
+ * @param {'user'|'assistant'} role - Who sent the message.
+ * @param {string} text - The message content to display.
+ */
 function appendMessage(role, text) {
   const el = document.createElement('div');
   el.style.cssText = `
@@ -1838,6 +2129,18 @@ function appendMessage(role, text) {
   document.getElementById('chat-messages').scrollTop = 999999;
 }
 
+/**
+ * Send the current chat input to /api/chat and display the reply.
+ *
+ * Appends the user message and a temporary "…" thinking bubble, fetches
+ * the current plan context from /api/latest to include in the request,
+ * then POSTs the full chat history and plan context to /api/chat. On
+ * success, replaces the thinking bubble with the formatted assistant reply
+ * and appends it to the history. Shows an error message in the bubble on
+ * failure.
+ *
+ * @returns {Promise<void>}
+ */
 async function sendChat() {
   const input = document.getElementById('chat-input');
   const text = input.value.trim();

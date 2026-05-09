@@ -1,5 +1,21 @@
 # Copyright Michael Mahoney February 2026
 
+"""
+run_worker.py — Background task worker for the Wayfinder agent pipeline.
+
+Continuously polls the database for pending AgentTask rows and processes
+them one at a time using Postgres row-level locking to prevent duplicate
+execution across multiple worker instances. Dispatches each task to the
+appropriate tool runner or the AI supervisor, stores results, and enqueues
+follow-up tasks as directed by the supervisor's agentic loop.
+
+Supported task types: weather, places, transit, alerts, email_alert,
+culture, events, and supervisor_update.
+
+Run from the repo root:
+    python workers/run_worker.py
+"""
+
 from __future__ import annotations
 
 import json
@@ -39,8 +55,20 @@ TOOL_RUNNERS = {
 
 def _safe_load_task_input(task: AgentTask) -> dict:
     """
-    Actually use task.input_json (if present) and pass it into tools.
-    Always returns a dict.
+    Parse a task's ``input_json`` field into a dictionary.
+
+    Reads the ``input_json`` attribute from the task and attempts to
+    deserialize it. Non-dict JSON values (e.g. a bare string or number)
+    are wrapped under a ``"value"`` key. Malformed JSON is returned as
+    a dict with a ``"raw"`` key containing the original string.
+
+    Args:
+        task: An ``AgentTask`` model instance whose ``input_json``
+            attribute will be parsed.
+
+    Returns:
+        A dictionary representing the task input. Returns an empty
+        dictionary if ``input_json`` is absent or empty.
     """
     raw = getattr(task, "input_json", None)
     if not raw:
@@ -54,8 +82,16 @@ def _safe_load_task_input(task: AgentTask) -> dict:
 
 def _ensure_supervisor_task(submission_id: int) -> None:
     """
-    Make sure there is a pending supervisor_update task for this submission,
-    so the plan refreshes as tool results arrive (agentic loop).
+    Enqueue a supervisor update task for a submission if one is not already pending.
+
+    Checks whether a ``supervisor_update`` task in ``pending`` status already
+    exists for the given submission. If not, creates one so the AI supervisor
+    will re-evaluate the plan as new tool results arrive, driving the
+    agentic loop forward.
+
+    Args:
+        submission_id: Primary key of the ``WayfinderSubmission`` to check
+            and potentially enqueue a supervisor task for.
     """
     exists = (
         AgentTask.query.filter_by(submission_id=submission_id, task_type="supervisor_update", status="pending")
@@ -78,8 +114,16 @@ def _ensure_supervisor_task(submission_id: int) -> None:
 
 def _claim_next_task() -> AgentTask | None:
     """
-    Atomically claim one pending task using Postgres row locking.
-    Requires Postgres (Render) which you are using.
+    Atomically claim the oldest pending task using Postgres row locking.
+
+    Queries for the earliest ``pending`` task by ``created_at``, locks it
+    with ``SELECT FOR UPDATE SKIP LOCKED`` to prevent other worker instances
+    from claiming the same row, then immediately marks it as ``running``
+    and increments its attempt counter.
+
+    Returns:
+        The claimed and updated ``AgentTask`` instance, or ``None`` if no
+        pending tasks are available.
     """
     task = (
         AgentTask.query.filter_by(status="pending")
@@ -100,7 +144,16 @@ def _claim_next_task() -> AgentTask | None:
 
 def _mark_failed(task: AgentTask, err: str) -> None:
     """
-    central failure handler with retry logic.
+    Record a task failure and apply retry logic.
+
+    Stores the error message and finish timestamp on the task. If the task
+    has not yet exhausted its maximum allowed attempts, it is reset to
+    ``pending`` so the worker will try it again. Otherwise it is marked
+    ``failed`` permanently.
+
+    Args:
+        task: The ``AgentTask`` instance that failed.
+        err: A string describing the error that caused the failure.
     """
     task.error = err
     task.finished_at = datetime.utcnow()
@@ -115,12 +168,33 @@ def _mark_failed(task: AgentTask, err: str) -> None:
 
 
 def _mark_completed(task: AgentTask) -> None:
+    """
+    Mark a task as successfully completed and record its finish time.
+
+    Args:
+        task: The ``AgentTask`` instance to mark as completed.
+    """
     task.status = "completed"
     task.finished_at = datetime.utcnow()
     db.session.commit()
 
 
 def _load_tool_payloads(submission_id: int, tool_name: str) -> list[dict]:
+    """
+    Load all stored payloads for a specific tool and submission.
+
+    Queries ``ToolResult`` rows matching the given submission and tool name,
+    ordered by creation time, and deserializes each ``result_json`` field.
+    Rows that fail JSON parsing are silently skipped.
+
+    Args:
+        submission_id: Primary key of the target ``WayfinderSubmission``.
+        tool_name: The tool name string to filter by (e.g. ``"email_alert"``).
+
+    Returns:
+        A list of parsed payload dictionaries in ascending creation order.
+        Returns an empty list if no matching rows exist or all fail to parse.
+    """
     rows = (
         ToolResult.query.filter_by(submission_id=submission_id, tool_name=tool_name)
         .order_by(ToolResult.created_at.asc())
@@ -138,10 +212,23 @@ def _load_tool_payloads(submission_id: int, tool_name: str) -> list[dict]:
 
 def _extract_new_alerts_for_email(submission_id: int, alert_payload: dict) -> list[dict]:
     """
-    Temporary first-version behavior:
-    - if this submission already has any completed email_alert result, do not send again
-    - only use alerts from the current alerts payload
-    - only keep medium/high alerts
+    Determine which alerts from the current payload should trigger an email.
+
+    Implements a send-once guard: if any prior ``email_alert`` result already
+    exists for this submission, no alerts are returned. Otherwise, filters
+    the current alerts payload down to medium- and high-severity items that
+    have a non-empty title.
+
+    Args:
+        submission_id: Primary key of the ``WayfinderSubmission`` to check
+            for prior email alert history.
+        alert_payload: The parsed payload dictionary from the most recent
+            alerts tool result, expected to contain an ``"alerts"`` list.
+
+    Returns:
+        A filtered list of alert dictionaries eligible for email delivery,
+        or an empty list if a prior email has already been sent or no
+        qualifying alerts exist.
     """
     prior_email_results = _load_tool_payloads(submission_id, "email_alert")
     if prior_email_results:
@@ -168,6 +255,20 @@ def _extract_new_alerts_for_email(submission_id: int, alert_payload: dict) -> li
 
 
 def _run_tool_task(task: AgentTask) -> None:
+    """
+    Execute a tool task and persist the result to the database.
+
+    Loads the submission, resolves the correct tool runner from
+    ``TOOL_RUNNERS``, invokes it with the task input, and saves the
+    returned payload as a new ``ToolResult`` row. After saving, updates
+    the submission status to ``"processing"`` if it is still pending.
+    If the task is an alerts task and important alerts are found, enqueues
+    an ``email_alert`` task (once per submission). Always enqueues a
+    ``supervisor_update`` task so the plan is refreshed with the new data.
+
+    Args:
+        task: The claimed ``AgentTask`` instance to execute.
+    """
     submission = WayfinderSubmission.query.get(task.submission_id)
     if not submission:
         _mark_failed(task, f"Submission {task.submission_id} not found.")
@@ -232,6 +333,21 @@ def _run_tool_task(task: AgentTask) -> None:
 
 
 def _run_supervisor_task(task: AgentTask) -> None:
+    """
+    Run the AI supervisor and update the trip plan in the database.
+
+    Loads the submission, all existing tool results, and the current saved
+    plan, then calls the AI supervisor to produce an updated plan and a list
+    of any additional tool tasks still needed. Persists the new plan to the
+    ``TripPlan`` table, updates the submission status, marks any associated
+    ``PlanEdit`` as applied, and enqueues the supervisor-requested follow-up
+    tasks — skipping any that are already pending or running.
+
+    Args:
+        task: The claimed ``AgentTask`` instance of type ``supervisor_update``.
+            Its ``input_json`` may contain a ``plan_edit_id`` when the
+            supervisor run was triggered by a user edit request.
+    """
     submission = WayfinderSubmission.query.get(task.submission_id)
     if not submission:
         _mark_failed(task, f"Submission {task.submission_id} not found.")
@@ -358,6 +474,17 @@ def _run_supervisor_task(task: AgentTask) -> None:
 
 
 def main() -> None:
+    """
+    Start the Wayfinder background worker loop.
+
+    Prints the worker ID and poll interval, then enters an infinite loop
+    inside the Flask application context. On each iteration, attempts to
+    claim a pending task and dispatches it to either ``_run_supervisor_task``
+    or ``_run_tool_task`` based on its type. Sleeps for ``POLL_SECONDS``
+    when no tasks are available. Unhandled exceptions are caught, the
+    in-progress task is marked failed, and the loop continues after a
+    brief sleep to avoid tight error loops.
+    """
     print(f"[Wayfinder Worker] Starting worker_id={WORKER_ID} poll={POLL_SECONDS}s")
 
     with app.app_context():
