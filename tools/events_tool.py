@@ -1,5 +1,18 @@
 # Copyright Michael Mahoney, Edgar Falfan April 2026
 
+"""
+events_tool.py — Ticketmaster event fetcher for Wayfinder.
+
+Queries the Ticketmaster Discovery API for local events at the traveler's
+destination within their travel date window. Parses each event into a
+structured dict including name, date, time, venue, genre, price range,
+and ticket URL.
+
+Requires the TICKETMASTER_API_KEY environment variable to be set.
+
+Worker entry point: run(submission, task_input).
+"""
+
 from __future__ import annotations
 
 import logging
@@ -16,8 +29,21 @@ DISCOVERY_URL = "https://app.ticketmaster.com/discovery/v2/events.json"
 
 def _parse_dates(travel_dates: str) -> tuple[str | None, str | None]:
     """
-    Parse a date range string like '2026-06-01 to 2026-06-07'
-    into ISO 8601 strings for the Ticketmaster API.
+    Parse a travel date range string into ISO 8601 timestamps.
+
+    Accepts formats like ``"2026-06-01 to 2026-06-07"`` or ranges using an
+    em dash (``"–"``), which is normalized to ``" to "`` before splitting.
+    Start date is suffixed with ``T00:00:00Z`` and end date with
+    ``T23:59:59Z`` to cover the full day in UTC.
+
+    Args:
+        travel_dates: A date range string from the submission. May use
+            ``" to "`` or ``"–"`` as the separator.
+
+    Returns:
+        A tuple of ``(start_datetime, end_datetime)`` ISO 8601 strings.
+        Either value may be ``None`` if the input is empty, malformed,
+        or missing the corresponding date part.
     """
     if not travel_dates:
         return None, None
@@ -31,6 +57,28 @@ def _parse_dates(travel_dates: str) -> tuple[str | None, str | None]:
 
 
 def run(submission: Any, task_input: dict[str, Any] | None = None) -> dict[str, Any]:
+    """
+    Fetch local events for the traveler's destination and travel dates.
+
+    Parses the travel date range into ISO 8601 timestamps, queries the
+    Ticketmaster Discovery API filtered by city and date window, and
+    normalizes each returned event into a structured dictionary. Returns
+    early with an error payload if the API key is missing or no destination
+    is provided.
+
+    Args:
+        submission: WayfinderSubmission model instance. Uses the
+            ``desired_destination`` and ``travel_dates`` attributes.
+        task_input: Dictionary of task-specific input from the worker.
+            Not currently used but accepted for interface consistency.
+
+    Returns:
+        A dictionary containing ``type`` (always ``"events"``),
+        ``destination``, ``travel_dates``, ``events_found`` (integer count),
+        and ``events`` (list of dicts with ``name``, ``date``, ``time``,
+        ``venue``, ``segment``, ``genre``, ``price``, and ``url``).
+        On failure, includes an ``error`` key and an empty ``events`` list.
+    """
     destination = getattr(submission, "desired_destination", None) or ""
     travel_dates = getattr(submission, "travel_dates", None) or ""
 

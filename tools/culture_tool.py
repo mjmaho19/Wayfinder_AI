@@ -1,5 +1,15 @@
 # Copyright Michael Mahoney, Edgar Falfan April 2026
 
+"""
+culture_tool.py — AI-powered cultural facts generator for Wayfinder.
+
+Uses the Groq API (LLaMA 3.3 70B) to produce destination-specific cultural
+facts and practical traveler tips in a structured JSON format. Covers
+history, food culture, local customs, language, fun facts, and etiquette.
+
+Worker entry point: run(submission, task_input).
+"""
+
 from __future__ import annotations
 
 import logging
@@ -44,6 +54,26 @@ Return ONLY the JSON object. No extra text.
 
 
 def run(submission: Any, task_input: dict[str, Any] | None = None) -> dict[str, Any]:
+    """
+    Fetch AI-generated cultural facts and tips for the traveler's destination.
+
+    Sends the destination name to the Groq model with a structured prompt,
+    parses the returned JSON, and returns a normalized result dictionary.
+    Strips markdown fences from the response if the model adds them. Returns
+    an error payload if no destination is provided or the API call fails.
+
+    Args:
+        submission: WayfinderSubmission model instance. Uses the
+            ``desired_destination`` attribute as the target location.
+        task_input: Dictionary of task-specific input from the worker.
+            Not currently used but accepted for interface consistency.
+
+    Returns:
+        A dictionary containing ``type`` (always ``"culture"``),
+        ``destination``, ``facts`` (list of emoji/title/body dicts), and
+        ``quick_tips`` (list of short tip strings). On failure, includes
+        an ``error`` key with a description and empty facts and tips lists.
+    """
     destination = getattr(submission, "desired_destination", None) or ""
 
     if not destination:
