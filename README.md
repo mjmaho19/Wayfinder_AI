@@ -58,11 +58,18 @@ cp .env.example .env
 Edit `.env` and fill in your own API keys:
 
 ```
-FLASK_KEY=your-secret-key
 GROQ_API_KEY=your-groq-api-key
-GOOGLE_PLACES_API_KEY=your-google-places-api-key
-ROUTES_API_KEY=your-google-routes-api-key
+FLASK_KEY=your-secret-key
 DATABASE_URL=your-database-url
+GOOGLE_PLACES_API_KEY=your-google-places-api-key
+OPENAI_API_KEY=your-groq-api-key
+NEWS_API_KEY=news-api-key
+RESEND_API_KEY=resend-api-key
+EMAIL_ENABLED=true
+EMAIL_FROM=application-name <onboarding@resend.dev>
+MY_EMAIL=your-resend-email
+ROUTES_API_KEY=your-google-routes-api-key
+GOOGLE_MAPS_API_KEY=google-maps-api-key
 ```
 
 ### 5. Run the Flask app
@@ -115,11 +122,18 @@ pip install -r requirements.txt
 Copy `.env.example` to `.env` and fill in your own API keys:
 
 ```
-FLASK_KEY=your-secret-key
 GROQ_API_KEY=your-groq-api-key
-GOOGLE_PLACES_API_KEY=your-google-places-api-key
-ROUTES_API_KEY=your-google-routes-api-key
+FLASK_KEY=your-secret-key
 DATABASE_URL=your-database-url
+GOOGLE_PLACES_API_KEY=your-google-places-api-key
+OPENAI_API_KEY=your-groq-api-key
+NEWS_API_KEY=news-api-key
+RESEND_API_KEY=resend-api-key
+EMAIL_ENABLED=true
+EMAIL_FROM=application-name <onboarding@resend.dev>
+MY_EMAIL=your-resend-email
+ROUTES_API_KEY=your-google-routes-api-key
+GOOGLE_MAPS_API_KEY=google-maps-api-key
 ```
 
 ### 5. Run the Flask app
