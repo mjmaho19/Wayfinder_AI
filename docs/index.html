@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Python: module index</title>
+</head><body>
+
+<table class="heading">
+<tr class="heading-text decor">
+<td class="title">&nbsp;<br><strong class="title">index</strong></td>
+<td class="extra"><a href=".">index</a><br><a href="file:/Users/tiki/Desktop/lib_project/index.py">/Users/tiki/Desktop/lib_project/index.py</a></td></tr></table>
+    <p><span class="code">#&nbsp;Copyright&nbsp;Michael&nbsp;Mahoney,&nbsp;Edgar&nbsp;Falfan&nbsp;February&nbsp;2026</span></p>
+<p>
+<table class="section">
+<tr class="decor pkg-content-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Modules</strong></td></tr>
+    
+<tr><td class="decor pkg-content-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><table><tr><td class="multicolumn"><a href="json.html">json</a><br>
+</td><td class="multicolumn"><a href="os.html">os</a><br>
+</td><td class="multicolumn"><a href="re.html">re</a><br>
+</td><td class="multicolumn"></td></tr></table></td></tr></table><p>
+<table class="section">
+<tr class="decor index-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Classes</strong></td></tr>
+    
+<tr><td class="decor index-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><dl>
+<dt class="heading-text">sqlalchemy.orm.decl_api.Model(<a href="flask_sqlalchemy.model.html#Model">flask_sqlalchemy.model.Model</a>)
+</dt><dd>
+<dl>
+<dt class="heading-text"><a href="index.html#AgentTask">AgentTask</a>
+</dt><dt class="heading-text"><a href="index.html#PlanEdit">PlanEdit</a>
+</dt><dt class="heading-text"><a href="index.html#ToolResult">ToolResult</a>
+</dt><dt class="heading-text"><a href="index.html#TripPlan">TripPlan</a>
+</dt><dt class="heading-text"><a href="index.html#WayfinderSubmission">WayfinderSubmission</a>
+</dt></dl>
+</dd>
+</dl>
+ <p>
+<table class="section">
+<tr class="decor title-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><a name="AgentTask">class <strong>AgentTask</strong></a>(sqlalchemy.orm.decl_api.Model)</td></tr>
+    
+<tr><td class="decor title-decor" rowspan=2><span class="code">&nbsp;&nbsp;&nbsp;</span></td>
+<td class="decor title-decor" colspan=2><span class="code"><a href="#AgentTask">AgentTask</a>(**kwargs)<br>
+&nbsp;<br>
+<br>&nbsp;</span></td></tr>
+<tr><td>&nbsp;</td>
+<td class="singlecolumn"><dl><dt>Method resolution order:</dt>
+<dd><a href="index.html#AgentTask">AgentTask</a></dd>
+<dd>sqlalchemy.orm.decl_api.Model</dd>
+<dd><a href="flask_sqlalchemy.model.html#Model">flask_sqlalchemy.model.Model</a></dd>
+<dd><a href="builtins.html#object">builtins.object</a></dd>
+</dl>
+<hr>
+Methods defined here:<br>
+<dl><dt><a name="AgentTask-__init__"><strong>__init__</strong></a>(self, **kwargs)<span class="grey"><span class="heading-text"> from sqlalchemy.orm.instrumentation</span></span></dt><dd><span class="code">A&nbsp;simple&nbsp;constructor&nbsp;that&nbsp;allows&nbsp;initialization&nbsp;from&nbsp;kwargs.<br>
+&nbsp;<br>
+Sets&nbsp;attributes&nbsp;on&nbsp;the&nbsp;constructed&nbsp;instance&nbsp;using&nbsp;the&nbsp;names&nbsp;and<br>
+values&nbsp;in&nbsp;``kwargs``.<br>
+&nbsp;<br>
+Only&nbsp;keys&nbsp;that&nbsp;are&nbsp;present&nbsp;as<br>
+attributes&nbsp;of&nbsp;the&nbsp;instance's&nbsp;class&nbsp;are&nbsp;allowed.&nbsp;These&nbsp;could&nbsp;be,<br>
+for&nbsp;example,&nbsp;any&nbsp;mapped&nbsp;columns&nbsp;or&nbsp;relationships.</span></dd></dl>
+
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>attempts</strong></dt>
+</dl>
+<dl><dt><strong>created_at</strong></dt>
+</dl>
+<dl><dt><strong>error</strong></dt>
+</dl>
+<dl><dt><strong>finished_at</strong></dt>
+</dl>
+<dl><dt><strong>id</strong></dt>
+</dl>
+<dl><dt><strong>input_json</strong></dt>
+</dl>
+<dl><dt><strong>max_attempts</strong></dt>
+</dl>
+<dl><dt><strong>started_at</strong></dt>
+</dl>
+<dl><dt><strong>status</strong></dt>
+</dl>
+<dl><dt><strong>submission</strong></dt>
+</dl>
+<dl><dt><strong>submission_id</strong></dt>
+</dl>
+<dl><dt><strong>task_type</strong></dt>
+</dl>
+<dl><dt><strong>worker_id</strong></dt>
+</dl>
+<hr>
+Data and other attributes defined here:<br>
+<dl><dt><strong>__mapper__</strong> = &lt;Mapper at 0x10c09eed0; AgentTask&gt;</dl>
+
+<dl><dt><strong>__table__</strong> = Table('agent_task', MetaData(), Column('id', Int...error', Text(), table=&lt;agent_task&gt;), schema=None)</dl>
+
+<dl><dt><strong>__tablename__</strong> = 'agent_task'</dl>
+
+<hr>
+Methods inherited from sqlalchemy.orm.decl_api.Model:<br>
+<dl><dt><strong>query</strong></dt>
+</dl>
+
+<hr>
+Data and other attributes inherited from sqlalchemy.orm.decl_api.Model:<br>
+<dl><dt><strong>__abstract__</strong> = True</dl>
+
+<dl><dt><strong>__fsa__</strong> = &lt;SQLAlchemy&gt;</dl>
+
+<dl><dt><strong>metadata</strong> = MetaData()</dl>
+
+<dl><dt><strong>query_class</strong> = &lt;class 'flask_sqlalchemy.query.Query'&gt;<dd><span class="code">SQLAlchemy&nbsp;:class:`~sqlalchemy.orm.query.Query`&nbsp;subclass&nbsp;with&nbsp;some&nbsp;extra&nbsp;methods<br>
+useful&nbsp;for&nbsp;querying&nbsp;in&nbsp;a&nbsp;web&nbsp;application.<br>
+&nbsp;<br>
+This&nbsp;is&nbsp;the&nbsp;default&nbsp;query&nbsp;class&nbsp;for&nbsp;:attr:`.Model.query`.<br>
+&nbsp;<br>
+..&nbsp;versionchanged::&nbsp;3.0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;Renamed&nbsp;to&nbsp;``Query``&nbsp;from&nbsp;``BaseQuery``.</span></dl>
+
+<dl><dt><strong>registry</strong> = &lt;sqlalchemy.orm.decl_api.registry object&gt;</dl>
+
+<hr>
+Methods inherited from <a href="flask_sqlalchemy.model.html#Model">flask_sqlalchemy.model.Model</a>:<br>
+<dl><dt><a name="AgentTask-__repr__"><strong>__repr__</strong></a>(self) -&gt; 'str'</dt><dd><span class="code">Return&nbsp;repr(self).</span></dd></dl>
+
+<hr>
+Data descriptors inherited from <a href="flask_sqlalchemy.model.html#Model">flask_sqlalchemy.model.Model</a>:<br>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><span class="code">dictionary&nbsp;for&nbsp;instance&nbsp;variables</span></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><span class="code">list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object</span></dd>
+</dl>
+<hr>
+Data and other attributes inherited from <a href="flask_sqlalchemy.model.html#Model">flask_sqlalchemy.model.Model</a>:<br>
+<dl><dt><strong>__annotations__</strong> = {'__fsa__': 't.ClassVar[SQLAlchemy]', 'query': 't.ClassVar[Query]', 'query_class': 't.ClassVar[type[Query]]'}</dl>
+
+</td></tr></table> <p>
+<table class="section">
+<tr class="decor title-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><a name="PlanEdit">class <strong>PlanEdit</strong></a>(sqlalchemy.orm.decl_api.Model)</td></tr>
+    
+<tr><td class="decor title-decor" rowspan=2><span class="code">&nbsp;&nbsp;&nbsp;</span></td>
+<td class="decor title-decor" colspan=2><span class="code"><a href="#PlanEdit">PlanEdit</a>(**kwargs)<br>
+&nbsp;<br>
+<br>&nbsp;</span></td></tr>
+<tr><td>&nbsp;</td>
+<td class="singlecolumn"><dl><dt>Method resolution order:</dt>
+<dd><a href="index.html#PlanEdit">PlanEdit</a></dd>
+<dd>sqlalchemy.orm.decl_api.Model</dd>
+<dd><a href="flask_sqlalchemy.model.html#Model">flask_sqlalchemy.model.Model</a></dd>
+<dd><a href="builtins.html#object">builtins.object</a></dd>
+</dl>
+<hr>
+Methods defined here:<br>
+<dl><dt><a name="PlanEdit-__init__"><strong>__init__</strong></a>(self, **kwargs)<span class="grey"><span class="heading-text"> from sqlalchemy.orm.instrumentation</span></span></dt><dd><span class="code">A&nbsp;simple&nbsp;constructor&nbsp;that&nbsp;allows&nbsp;initialization&nbsp;from&nbsp;kwargs.<br>
+&nbsp;<br>
+Sets&nbsp;attributes&nbsp;on&nbsp;the&nbsp;constructed&nbsp;instance&nbsp;using&nbsp;the&nbsp;names&nbsp;and<br>
+values&nbsp;in&nbsp;``kwargs``.<br>
+&nbsp;<br>
+Only&nbsp;keys&nbsp;that&nbsp;are&nbsp;present&nbsp;as<br>
+attributes&nbsp;of&nbsp;the&nbsp;instance's&nbsp;class&nbsp;are&nbsp;allowed.&nbsp;These&nbsp;could&nbsp;be,<br>
+for&nbsp;example,&nbsp;any&nbsp;mapped&nbsp;columns&nbsp;or&nbsp;relationships.</span></dd></dl>
+
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>assistant_reply</strong></dt>
+</dl>
+<dl><dt><strong>created_at</strong></dt>
+</dl>
+<dl><dt><strong>edit_json</strong></dt>
+</dl>
+<dl><dt><strong>id</strong></dt>
+</dl>
+<dl><dt><strong>source</strong></dt>
+</dl>
+<dl><dt><strong>status</strong></dt>
+</dl>
+<dl><dt><strong>submission</strong></dt>
+</dl>
+<dl><dt><strong>submission_id</strong></dt>
+</dl>
+<dl><dt><strong>user_message</strong></dt>
+</dl>
+<hr>
+Data and other attributes defined here:<br>
+<dl><dt><strong>__mapper__</strong> = &lt;Mapper at 0x10c718bf0; PlanEdit&gt;</dl>
+
+<dl><dt><strong>__table__</strong> = Table('plan_edit', MetaData(), Column('id', Inte...t_json', Text(), table=&lt;plan_edit&gt;), schema=None)</dl>
+
+<dl><dt><strong>__tablename__</strong> = 'plan_edit'</dl>
+
+<hr>
+Methods inherited from sqlalchemy.orm.decl_api.Model:<br>
+<dl><dt><strong>query</strong></dt>
+</dl>
+
+<hr>
+Data and other attributes inherited from sqlalchemy.orm.decl_api.Model:<br>
+<dl><dt><strong>__abstract__</strong> = True</dl>
+
+<dl><dt><strong>__fsa__</strong> = &lt;SQLAlchemy&gt;</dl>
+
+<dl><dt><strong>metadata</strong> = MetaData()</dl>
+
+<dl><dt><strong>query_class</strong> = &lt;class 'flask_sqlalchemy.query.Query'&gt;<dd><span class="code">SQLAlchemy&nbsp;:class:`~sqlalchemy.orm.query.Query`&nbsp;subclass&nbsp;with&nbsp;some&nbsp;extra&nbsp;methods<br>
+useful&nbsp;for&nbsp;querying&nbsp;in&nbsp;a&nbsp;web&nbsp;application.<br>
+&nbsp;<br>
+This&nbsp;is&nbsp;the&nbsp;default&nbsp;query&nbsp;class&nbsp;for&nbsp;:attr:`.Model.query`.<br>
+&nbsp;<br>
+..&nbsp;versionchanged::&nbsp;3.0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;Renamed&nbsp;to&nbsp;``Query``&nbsp;from&nbsp;``BaseQuery``.</span></dl>
+
+<dl><dt><strong>registry</strong> = &lt;sqlalchemy.orm.decl_api.registry object&gt;</dl>
+
+<hr>
+Methods inherited from <a href="flask_sqlalchemy.model.html#Model">flask_sqlalchemy.model.Model</a>:<br>
+<dl><dt><a name="PlanEdit-__repr__"><strong>__repr__</strong></a>(self) -&gt; 'str'</dt><dd><span class="code">Return&nbsp;repr(self).</span></dd></dl>
+
+<hr>
+Data descriptors inherited from <a href="flask_sqlalchemy.model.html#Model">flask_sqlalchemy.model.Model</a>:<br>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><span class="code">dictionary&nbsp;for&nbsp;instance&nbsp;variables</span></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><span class="code">list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object</span></dd>
+</dl>
+<hr>
+Data and other attributes inherited from <a href="flask_sqlalchemy.model.html#Model">flask_sqlalchemy.model.Model</a>:<br>
+<dl><dt><strong>__annotations__</strong> = {'__fsa__': 't.ClassVar[SQLAlchemy]', 'query': 't.ClassVar[Query]', 'query_class': 't.ClassVar[type[Query]]'}</dl>
+
+</td></tr></table> <p>
+<table class="section">
+<tr class="decor title-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><a name="ToolResult">class <strong>ToolResult</strong></a>(sqlalchemy.orm.decl_api.Model)</td></tr>
+    
+<tr><td class="decor title-decor" rowspan=2><span class="code">&nbsp;&nbsp;&nbsp;</span></td>
+<td class="decor title-decor" colspan=2><span class="code"><a href="#ToolResult">ToolResult</a>(**kwargs)<br>
+&nbsp;<br>
+<br>&nbsp;</span></td></tr>
+<tr><td>&nbsp;</td>
+<td class="singlecolumn"><dl><dt>Method resolution order:</dt>
+<dd><a href="index.html#ToolResult">ToolResult</a></dd>
+<dd>sqlalchemy.orm.decl_api.Model</dd>
+<dd><a href="flask_sqlalchemy.model.html#Model">flask_sqlalchemy.model.Model</a></dd>
+<dd><a href="builtins.html#object">builtins.object</a></dd>
+</dl>
+<hr>
+Methods defined here:<br>
+<dl><dt><a name="ToolResult-__init__"><strong>__init__</strong></a>(self, **kwargs)<span class="grey"><span class="heading-text"> from sqlalchemy.orm.instrumentation</span></span></dt><dd><span class="code">A&nbsp;simple&nbsp;constructor&nbsp;that&nbsp;allows&nbsp;initialization&nbsp;from&nbsp;kwargs.<br>
+&nbsp;<br>
+Sets&nbsp;attributes&nbsp;on&nbsp;the&nbsp;constructed&nbsp;instance&nbsp;using&nbsp;the&nbsp;names&nbsp;and<br>
+values&nbsp;in&nbsp;``kwargs``.<br>
+&nbsp;<br>
+Only&nbsp;keys&nbsp;that&nbsp;are&nbsp;present&nbsp;as<br>
+attributes&nbsp;of&nbsp;the&nbsp;instance's&nbsp;class&nbsp;are&nbsp;allowed.&nbsp;These&nbsp;could&nbsp;be,<br>
+for&nbsp;example,&nbsp;any&nbsp;mapped&nbsp;columns&nbsp;or&nbsp;relationships.</span></dd></dl>
+
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>created_at</strong></dt>
+</dl>
+<dl><dt><strong>id</strong></dt>
+</dl>
+<dl><dt><strong>result_json</strong></dt>
+</dl>
+<dl><dt><strong>submission</strong></dt>
+</dl>
+<dl><dt><strong>submission_id</strong></dt>
+</dl>
+<dl><dt><strong>tool_name</strong></dt>
+</dl>
+<hr>
+Data and other attributes defined here:<br>
+<dl><dt><strong>__mapper__</strong> = &lt;Mapper at 0x10c09fb90; ToolResult&gt;</dl>
+
+<dl><dt><strong>__table__</strong> = Table('tool_result', MetaData(), Column('id', In...able=&lt;tool_result&gt;, nullable=False), schema=None)</dl>
+
+<dl><dt><strong>__tablename__</strong> = 'tool_result'</dl>
+
+<hr>
+Methods inherited from sqlalchemy.orm.decl_api.Model:<br>
+<dl><dt><strong>query</strong></dt>
+</dl>
+
+<hr>
+Data and other attributes inherited from sqlalchemy.orm.decl_api.Model:<br>
+<dl><dt><strong>__abstract__</strong> = True</dl>
+
+<dl><dt><strong>__fsa__</strong> = &lt;SQLAlchemy&gt;</dl>
+
+<dl><dt><strong>metadata</strong> = MetaData()</dl>
+
+<dl><dt><strong>query_class</strong> = &lt;class 'flask_sqlalchemy.query.Query'&gt;<dd><span class="code">SQLAlchemy&nbsp;:class:`~sqlalchemy.orm.query.Query`&nbsp;subclass&nbsp;with&nbsp;some&nbsp;extra&nbsp;methods<br>
+useful&nbsp;for&nbsp;querying&nbsp;in&nbsp;a&nbsp;web&nbsp;application.<br>
+&nbsp;<br>
+This&nbsp;is&nbsp;the&nbsp;default&nbsp;query&nbsp;class&nbsp;for&nbsp;:attr:`.Model.query`.<br>
+&nbsp;<br>
+..&nbsp;versionchanged::&nbsp;3.0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;Renamed&nbsp;to&nbsp;``Query``&nbsp;from&nbsp;``BaseQuery``.</span></dl>
+
+<dl><dt><strong>registry</strong> = &lt;sqlalchemy.orm.decl_api.registry object&gt;</dl>
+
+<hr>
+Methods inherited from <a href="flask_sqlalchemy.model.html#Model">flask_sqlalchemy.model.Model</a>:<br>
+<dl><dt><a name="ToolResult-__repr__"><strong>__repr__</strong></a>(self) -&gt; 'str'</dt><dd><span class="code">Return&nbsp;repr(self).</span></dd></dl>
+
+<hr>
+Data descriptors inherited from <a href="flask_sqlalchemy.model.html#Model">flask_sqlalchemy.model.Model</a>:<br>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><span class="code">dictionary&nbsp;for&nbsp;instance&nbsp;variables</span></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><span class="code">list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object</span></dd>
+</dl>
+<hr>
+Data and other attributes inherited from <a href="flask_sqlalchemy.model.html#Model">flask_sqlalchemy.model.Model</a>:<br>
+<dl><dt><strong>__annotations__</strong> = {'__fsa__': 't.ClassVar[SQLAlchemy]', 'query': 't.ClassVar[Query]', 'query_class': 't.ClassVar[type[Query]]'}</dl>
+
+</td></tr></table> <p>
+<table class="section">
+<tr class="decor title-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><a name="TripPlan">class <strong>TripPlan</strong></a>(sqlalchemy.orm.decl_api.Model)</td></tr>
+    
+<tr><td class="decor title-decor" rowspan=2><span class="code">&nbsp;&nbsp;&nbsp;</span></td>
+<td class="decor title-decor" colspan=2><span class="code"><a href="#TripPlan">TripPlan</a>(**kwargs)<br>
+&nbsp;<br>
+<br>&nbsp;</span></td></tr>
+<tr><td>&nbsp;</td>
+<td class="singlecolumn"><dl><dt>Method resolution order:</dt>
+<dd><a href="index.html#TripPlan">TripPlan</a></dd>
+<dd>sqlalchemy.orm.decl_api.Model</dd>
+<dd><a href="flask_sqlalchemy.model.html#Model">flask_sqlalchemy.model.Model</a></dd>
+<dd><a href="builtins.html#object">builtins.object</a></dd>
+</dl>
+<hr>
+Methods defined here:<br>
+<dl><dt><a name="TripPlan-__init__"><strong>__init__</strong></a>(self, **kwargs)<span class="grey"><span class="heading-text"> from sqlalchemy.orm.instrumentation</span></span></dt><dd><span class="code">A&nbsp;simple&nbsp;constructor&nbsp;that&nbsp;allows&nbsp;initialization&nbsp;from&nbsp;kwargs.<br>
+&nbsp;<br>
+Sets&nbsp;attributes&nbsp;on&nbsp;the&nbsp;constructed&nbsp;instance&nbsp;using&nbsp;the&nbsp;names&nbsp;and<br>
+values&nbsp;in&nbsp;``kwargs``.<br>
+&nbsp;<br>
+Only&nbsp;keys&nbsp;that&nbsp;are&nbsp;present&nbsp;as<br>
+attributes&nbsp;of&nbsp;the&nbsp;instance's&nbsp;class&nbsp;are&nbsp;allowed.&nbsp;These&nbsp;could&nbsp;be,<br>
+for&nbsp;example,&nbsp;any&nbsp;mapped&nbsp;columns&nbsp;or&nbsp;relationships.</span></dd></dl>
+
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>created_at</strong></dt>
+</dl>
+<dl><dt><strong>id</strong></dt>
+</dl>
+<dl><dt><strong>plan_json</strong></dt>
+</dl>
+<dl><dt><strong>submission</strong></dt>
+</dl>
+<dl><dt><strong>submission_id</strong></dt>
+</dl>
+<dl><dt><strong>summary</strong></dt>
+</dl>
+<dl><dt><strong>updated_at</strong></dt>
+</dl>
+<hr>
+Data and other attributes defined here:<br>
+<dl><dt><strong>__mapper__</strong> = &lt;Mapper at 0x10c7181d0; TripPlan&gt;</dl>
+
+<dl><dt><strong>__table__</strong> = Table('trip_plan', MetaData(), Column('id', Inte...ummary', Text(), table=&lt;trip_plan&gt;), schema=None)</dl>
+
+<dl><dt><strong>__tablename__</strong> = 'trip_plan'</dl>
+
+<hr>
+Methods inherited from sqlalchemy.orm.decl_api.Model:<br>
+<dl><dt><strong>query</strong></dt>
+</dl>
+
+<hr>
+Data and other attributes inherited from sqlalchemy.orm.decl_api.Model:<br>
+<dl><dt><strong>__abstract__</strong> = True</dl>
+
+<dl><dt><strong>__fsa__</strong> = &lt;SQLAlchemy&gt;</dl>
+
+<dl><dt><strong>metadata</strong> = MetaData()</dl>
+
+<dl><dt><strong>query_class</strong> = &lt;class 'flask_sqlalchemy.query.Query'&gt;<dd><span class="code">SQLAlchemy&nbsp;:class:`~sqlalchemy.orm.query.Query`&nbsp;subclass&nbsp;with&nbsp;some&nbsp;extra&nbsp;methods<br>
+useful&nbsp;for&nbsp;querying&nbsp;in&nbsp;a&nbsp;web&nbsp;application.<br>
+&nbsp;<br>
+This&nbsp;is&nbsp;the&nbsp;default&nbsp;query&nbsp;class&nbsp;for&nbsp;:attr:`.Model.query`.<br>
+&nbsp;<br>
+..&nbsp;versionchanged::&nbsp;3.0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;Renamed&nbsp;to&nbsp;``Query``&nbsp;from&nbsp;``BaseQuery``.</span></dl>
+
+<dl><dt><strong>registry</strong> = &lt;sqlalchemy.orm.decl_api.registry object&gt;</dl>
+
+<hr>
+Methods inherited from <a href="flask_sqlalchemy.model.html#Model">flask_sqlalchemy.model.Model</a>:<br>
+<dl><dt><a name="TripPlan-__repr__"><strong>__repr__</strong></a>(self) -&gt; 'str'</dt><dd><span class="code">Return&nbsp;repr(self).</span></dd></dl>
+
+<hr>
+Data descriptors inherited from <a href="flask_sqlalchemy.model.html#Model">flask_sqlalchemy.model.Model</a>:<br>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><span class="code">dictionary&nbsp;for&nbsp;instance&nbsp;variables</span></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><span class="code">list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object</span></dd>
+</dl>
+<hr>
+Data and other attributes inherited from <a href="flask_sqlalchemy.model.html#Model">flask_sqlalchemy.model.Model</a>:<br>
+<dl><dt><strong>__annotations__</strong> = {'__fsa__': 't.ClassVar[SQLAlchemy]', 'query': 't.ClassVar[Query]', 'query_class': 't.ClassVar[type[Query]]'}</dl>
+
+</td></tr></table> <p>
+<table class="section">
+<tr class="decor title-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><a name="WayfinderSubmission">class <strong>WayfinderSubmission</strong></a>(sqlalchemy.orm.decl_api.Model)</td></tr>
+    
+<tr><td class="decor title-decor" rowspan=2><span class="code">&nbsp;&nbsp;&nbsp;</span></td>
+<td class="decor title-decor" colspan=2><span class="code"><a href="#WayfinderSubmission">WayfinderSubmission</a>(**kwargs)<br>
+&nbsp;<br>
+<br>&nbsp;</span></td></tr>
+<tr><td>&nbsp;</td>
+<td class="singlecolumn"><dl><dt>Method resolution order:</dt>
+<dd><a href="index.html#WayfinderSubmission">WayfinderSubmission</a></dd>
+<dd>sqlalchemy.orm.decl_api.Model</dd>
+<dd><a href="flask_sqlalchemy.model.html#Model">flask_sqlalchemy.model.Model</a></dd>
+<dd><a href="builtins.html#object">builtins.object</a></dd>
+</dl>
+<hr>
+Methods defined here:<br>
+<dl><dt><a name="WayfinderSubmission-__init__"><strong>__init__</strong></a>(self, **kwargs)<span class="grey"><span class="heading-text"> from sqlalchemy.orm.instrumentation</span></span></dt><dd><span class="code">A&nbsp;simple&nbsp;constructor&nbsp;that&nbsp;allows&nbsp;initialization&nbsp;from&nbsp;kwargs.<br>
+&nbsp;<br>
+Sets&nbsp;attributes&nbsp;on&nbsp;the&nbsp;constructed&nbsp;instance&nbsp;using&nbsp;the&nbsp;names&nbsp;and<br>
+values&nbsp;in&nbsp;``kwargs``.<br>
+&nbsp;<br>
+Only&nbsp;keys&nbsp;that&nbsp;are&nbsp;present&nbsp;as<br>
+attributes&nbsp;of&nbsp;the&nbsp;instance's&nbsp;class&nbsp;are&nbsp;allowed.&nbsp;These&nbsp;could&nbsp;be,<br>
+for&nbsp;example,&nbsp;any&nbsp;mapped&nbsp;columns&nbsp;or&nbsp;relationships.</span></dd></dl>
+
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>agent_result</strong></dt>
+</dl>
+<dl><dt><strong>budget</strong></dt>
+</dl>
+<dl><dt><strong>created_at</strong></dt>
+</dl>
+<dl><dt><strong>desired_destination</strong></dt>
+</dl>
+<dl><dt><strong>email</strong></dt>
+</dl>
+<dl><dt><strong>id</strong></dt>
+</dl>
+<dl><dt><strong>origin</strong></dt>
+</dl>
+<dl><dt><strong>preferences</strong></dt>
+</dl>
+<dl><dt><strong>raw_request</strong></dt>
+</dl>
+<dl><dt><strong>status</strong></dt>
+</dl>
+<dl><dt><strong>travel_dates</strong></dt>
+</dl>
+<dl><dt><strong>traveler_name</strong></dt>
+</dl>
+<hr>
+Data and other attributes defined here:<br>
+<dl><dt><strong>__mapper__</strong> = &lt;Mapper at 0x10c09e690; WayfinderSubmission&gt;</dl>
+
+<dl><dt><strong>__table__</strong> = Table('wayfinder_submission', MetaData(), Column...xt(), table=&lt;wayfinder_submission&gt;), schema=None)</dl>
+
+<dl><dt><strong>__tablename__</strong> = 'wayfinder_submission'</dl>
+
+<hr>
+Methods inherited from sqlalchemy.orm.decl_api.Model:<br>
+<dl><dt><strong>query</strong></dt>
+</dl>
+
+<hr>
+Data and other attributes inherited from sqlalchemy.orm.decl_api.Model:<br>
+<dl><dt><strong>__abstract__</strong> = True</dl>
+
+<dl><dt><strong>__fsa__</strong> = &lt;SQLAlchemy&gt;</dl>
+
+<dl><dt><strong>metadata</strong> = MetaData()</dl>
+
+<dl><dt><strong>query_class</strong> = &lt;class 'flask_sqlalchemy.query.Query'&gt;<dd><span class="code">SQLAlchemy&nbsp;:class:`~sqlalchemy.orm.query.Query`&nbsp;subclass&nbsp;with&nbsp;some&nbsp;extra&nbsp;methods<br>
+useful&nbsp;for&nbsp;querying&nbsp;in&nbsp;a&nbsp;web&nbsp;application.<br>
+&nbsp;<br>
+This&nbsp;is&nbsp;the&nbsp;default&nbsp;query&nbsp;class&nbsp;for&nbsp;:attr:`.Model.query`.<br>
+&nbsp;<br>
+..&nbsp;versionchanged::&nbsp;3.0<br>
+&nbsp;&nbsp;&nbsp;&nbsp;Renamed&nbsp;to&nbsp;``Query``&nbsp;from&nbsp;``BaseQuery``.</span></dl>
+
+<dl><dt><strong>registry</strong> = &lt;sqlalchemy.orm.decl_api.registry object&gt;</dl>
+
+<hr>
+Methods inherited from <a href="flask_sqlalchemy.model.html#Model">flask_sqlalchemy.model.Model</a>:<br>
+<dl><dt><a name="WayfinderSubmission-__repr__"><strong>__repr__</strong></a>(self) -&gt; 'str'</dt><dd><span class="code">Return&nbsp;repr(self).</span></dd></dl>
+
+<hr>
+Data descriptors inherited from <a href="flask_sqlalchemy.model.html#Model">flask_sqlalchemy.model.Model</a>:<br>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><span class="code">dictionary&nbsp;for&nbsp;instance&nbsp;variables</span></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><span class="code">list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object</span></dd>
+</dl>
+<hr>
+Data and other attributes inherited from <a href="flask_sqlalchemy.model.html#Model">flask_sqlalchemy.model.Model</a>:<br>
+<dl><dt><strong>__annotations__</strong> = {'__fsa__': 't.ClassVar[SQLAlchemy]', 'query': 't.ClassVar[Query]', 'query_class': 't.ClassVar[type[Query]]'}</dl>
+
+</td></tr></table></td></tr></table><p>
+<table class="section">
+<tr class="decor functions-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Functions</strong></td></tr>
+    
+<tr><td class="decor functions-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><dl><dt><a name="-api_latest"><strong>api_latest</strong></a>()</dt><dd><span class="code">Return&nbsp;the&nbsp;latest&nbsp;trip&nbsp;submission&nbsp;and&nbsp;related&nbsp;planning&nbsp;data.<br>
+&nbsp;<br>
+Includes&nbsp;the&nbsp;latest&nbsp;submission&nbsp;details,&nbsp;agent&nbsp;tasks,&nbsp;current&nbsp;trip&nbsp;plan,<br>
+and&nbsp;saved&nbsp;tool&nbsp;results&nbsp;for&nbsp;dashboard&nbsp;polling.<br>
+&nbsp;<br>
+Returns:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;A&nbsp;JSON&nbsp;response&nbsp;containing&nbsp;the&nbsp;latest&nbsp;trip&nbsp;state,&nbsp;or&nbsp;None&nbsp;if&nbsp;no<br>
+&nbsp;&nbsp;&nbsp;&nbsp;submission&nbsp;exists&nbsp;yet.</span></dd></dl>
+ <dl><dt><a name="-chat"><strong>chat</strong></a>()</dt><dd><span class="code">Handle&nbsp;chat&nbsp;messages&nbsp;and&nbsp;itinerary&nbsp;edit&nbsp;requests.<br>
+&nbsp;<br>
+Loads&nbsp;the&nbsp;relevant&nbsp;trip&nbsp;submission&nbsp;and&nbsp;plan,&nbsp;detects&nbsp;whether&nbsp;the&nbsp;user&nbsp;is<br>
+asking&nbsp;a&nbsp;general&nbsp;question,&nbsp;requesting&nbsp;a&nbsp;full&nbsp;trip&nbsp;rebuild,&nbsp;or&nbsp;applying&nbsp;a<br>
+specific&nbsp;itinerary&nbsp;edit.&nbsp;Saves&nbsp;chat&nbsp;interactions&nbsp;as&nbsp;<a href="#PlanEdit">PlanEdit</a>&nbsp;records.<br>
+&nbsp;<br>
+Returns:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;A&nbsp;JSON&nbsp;response&nbsp;containing&nbsp;the&nbsp;assistant&nbsp;reply&nbsp;and&nbsp;any&nbsp;edit&nbsp;metadata.</span></dd></dl>
+ <dl><dt><a name="-dashboard"><strong>dashboard</strong></a>()</dt><dd><span class="code">Render&nbsp;the&nbsp;Wayfinder&nbsp;dashboard.</span></dd></dl>
+ <dl><dt><a name="-get_database_url"><strong>get_database_url</strong></a>() -&gt; 'str'</dt><dd><span class="code">Return&nbsp;the&nbsp;configured&nbsp;database&nbsp;URL&nbsp;from&nbsp;the&nbsp;environment.</span></dd></dl>
+ <dl><dt><a name="-home"><strong>home</strong></a>()</dt><dd><span class="code">Redirect&nbsp;root&nbsp;to&nbsp;travel&nbsp;request&nbsp;page.</span></dd></dl>
+ <dl><dt><a name="-request_trip"><strong>request_trip</strong></a>()</dt><dd><span class="code">Display&nbsp;the&nbsp;trip&nbsp;request&nbsp;form&nbsp;or&nbsp;create&nbsp;a&nbsp;new&nbsp;trip&nbsp;request.<br>
+&nbsp;<br>
+For&nbsp;GET&nbsp;requests,&nbsp;renders&nbsp;the&nbsp;request&nbsp;form.&nbsp;For&nbsp;POST&nbsp;requests,&nbsp;validates<br>
+the&nbsp;submitted&nbsp;trip&nbsp;information,&nbsp;creates&nbsp;a&nbsp;<a href="#WayfinderSubmission">WayfinderSubmission</a>,&nbsp;seeds&nbsp;the<br>
+initial&nbsp;agent&nbsp;tasks,&nbsp;and&nbsp;redirects&nbsp;to&nbsp;the&nbsp;dashboard.<br>
+&nbsp;<br>
+Returns:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;The&nbsp;rendered&nbsp;request&nbsp;page&nbsp;or&nbsp;a&nbsp;redirect&nbsp;response.</span></dd></dl>
+ <dl><dt><a name="-transit"><strong>transit</strong></a>()</dt><dd><span class="code">Return&nbsp;transit&nbsp;route&nbsp;options&nbsp;for&nbsp;a&nbsp;requested&nbsp;origin&nbsp;and&nbsp;destination.<br>
+&nbsp;<br>
+Reads&nbsp;origin,&nbsp;destination,&nbsp;and&nbsp;mode&nbsp;from&nbsp;query&nbsp;parameters&nbsp;and&nbsp;passes&nbsp;them<br>
+to&nbsp;the&nbsp;transit&nbsp;search&nbsp;tool.<br>
+&nbsp;<br>
+Returns:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;A&nbsp;JSON&nbsp;response&nbsp;containing&nbsp;transit&nbsp;routes,&nbsp;or&nbsp;an&nbsp;error&nbsp;response&nbsp;if<br>
+&nbsp;&nbsp;&nbsp;&nbsp;origin&nbsp;or&nbsp;destination&nbsp;is&nbsp;missing.</span></dd></dl>
+ <dl><dt><a name="-weather"><strong>weather</strong></a>()</dt><dd><span class="code">Return&nbsp;current&nbsp;and&nbsp;daily&nbsp;weather&nbsp;data&nbsp;for&nbsp;the&nbsp;latest&nbsp;trip&nbsp;destination.<br>
+&nbsp;<br>
+Uses&nbsp;the&nbsp;latest&nbsp;<a href="#WayfinderSubmission">WayfinderSubmission</a>&nbsp;destination,&nbsp;geocodes&nbsp;it&nbsp;with<br>
+Open-Meteo,&nbsp;and&nbsp;fetches&nbsp;a&nbsp;seven-day&nbsp;forecast.&nbsp;Falls&nbsp;back&nbsp;to&nbsp;New&nbsp;York<br>
+if&nbsp;no&nbsp;destination&nbsp;is&nbsp;available&nbsp;or&nbsp;geocoding&nbsp;fails.<br>
+&nbsp;<br>
+Returns:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;A&nbsp;JSON&nbsp;response&nbsp;containing&nbsp;the&nbsp;resolved&nbsp;location,&nbsp;current&nbsp;weather,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;and&nbsp;daily&nbsp;forecast&nbsp;data.</span></dd></dl>
+</td></tr></table><p>
+<table class="section">
+<tr class="decor data-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Data</strong></td></tr>
+    
+<tr><td class="decor data-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><strong>app</strong> = &lt;Flask 'index'&gt;<br>
+<strong>application</strong> = &lt;Flask 'index'&gt;<br>
+<strong>db</strong> = &lt;SQLAlchemy&gt;<br>
+<strong>migrate</strong> = &lt;flask_migrate.Migrate object&gt;<br>
+<strong>request</strong> = &lt;LocalProxy unbound&gt;</td></tr></table>
+</body></html>

@@ -22,11 +22,15 @@ application = app
 # Config
 app.config["SECRET_KEY"] = os.getenv("FLASK_KEY", "dev-only-change-me")
 
-database_url = os.getenv("DATABASE_URL")
-if not database_url:
-    raise RuntimeError("DATABASE_URL is not set. Add it to your .env file.")
+def get_database_url() -> str:
+    """Return the configured database URL from the environment."""
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        raise RuntimeError("DATABASE_URL is not set. Add it to your .env file.")
+    return database_url
 
-app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+
+app.config["SQLALCHEMY_DATABASE_URI"] = get_database_url()
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["FLASK_APP"] = "index.py"
 
