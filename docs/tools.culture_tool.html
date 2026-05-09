@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Python: module tools.culture_tool</title>
+</head><body>
+
+<table class="heading">
+<tr class="heading-text decor">
+<td class="title">&nbsp;<br><strong class="title"><a href="tools.html" class="white">tools</a>.culture_tool</strong></td>
+<td class="extra"><a href=".">index</a><br><a href="file:/Users/tiki/Desktop/lib_project/tools/culture_tool.py">/Users/tiki/Desktop/lib_project/tools/culture_tool.py</a></td></tr></table>
+    <p><span class="code">culture_tool.py&nbsp;—&nbsp;AI-powered&nbsp;cultural&nbsp;facts&nbsp;generator&nbsp;for&nbsp;Wayfinder.<br>
+&nbsp;<br>
+Uses&nbsp;the&nbsp;Groq&nbsp;API&nbsp;(LLaMA&nbsp;3.3&nbsp;70B)&nbsp;to&nbsp;produce&nbsp;destination-specific&nbsp;cultural<br>
+facts&nbsp;and&nbsp;practical&nbsp;traveler&nbsp;tips&nbsp;in&nbsp;a&nbsp;structured&nbsp;JSON&nbsp;format.&nbsp;Covers<br>
+history,&nbsp;food&nbsp;culture,&nbsp;local&nbsp;customs,&nbsp;language,&nbsp;fun&nbsp;facts,&nbsp;and&nbsp;etiquette.<br>
+&nbsp;<br>
+Worker&nbsp;entry&nbsp;point:&nbsp;<a href="#-run">run</a>(submission,&nbsp;task_input).</span></p>
+<p>
+<table class="section">
+<tr class="decor pkg-content-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Modules</strong></td></tr>
+    
+<tr><td class="decor pkg-content-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><table><tr><td class="multicolumn"><a href="logging.html">logging</a><br>
+</td><td class="multicolumn"><a href="os.html">os</a><br>
+</td><td class="multicolumn"></td><td class="multicolumn"></td></tr></table></td></tr></table><p>
+<table class="section">
+<tr class="decor functions-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Functions</strong></td></tr>
+    
+<tr><td class="decor functions-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><dl><dt><a name="-run"><strong>run</strong></a>(submission: 'Any', task_input: 'dict[str, Any] | None' = None) -&gt; 'dict[str, Any]'</dt><dd><span class="code">Fetch&nbsp;AI-generated&nbsp;cultural&nbsp;facts&nbsp;and&nbsp;tips&nbsp;for&nbsp;the&nbsp;traveler's&nbsp;destination.<br>
+&nbsp;<br>
+Sends&nbsp;the&nbsp;destination&nbsp;name&nbsp;to&nbsp;the&nbsp;Groq&nbsp;model&nbsp;with&nbsp;a&nbsp;structured&nbsp;prompt,<br>
+parses&nbsp;the&nbsp;returned&nbsp;JSON,&nbsp;and&nbsp;returns&nbsp;a&nbsp;normalized&nbsp;result&nbsp;dictionary.<br>
+Strips&nbsp;markdown&nbsp;fences&nbsp;from&nbsp;the&nbsp;response&nbsp;if&nbsp;the&nbsp;model&nbsp;adds&nbsp;them.&nbsp;Returns<br>
+an&nbsp;error&nbsp;payload&nbsp;if&nbsp;no&nbsp;destination&nbsp;is&nbsp;provided&nbsp;or&nbsp;the&nbsp;API&nbsp;call&nbsp;fails.<br>
+&nbsp;<br>
+Args:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;submission:&nbsp;WayfinderSubmission&nbsp;model&nbsp;instance.&nbsp;Uses&nbsp;the<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;``desired_destination``&nbsp;attribute&nbsp;as&nbsp;the&nbsp;target&nbsp;location.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;task_input:&nbsp;Dictionary&nbsp;of&nbsp;task-specific&nbsp;input&nbsp;from&nbsp;the&nbsp;worker.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Not&nbsp;currently&nbsp;used&nbsp;but&nbsp;accepted&nbsp;for&nbsp;interface&nbsp;consistency.<br>
+&nbsp;<br>
+Returns:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;A&nbsp;dictionary&nbsp;containing&nbsp;``type``&nbsp;(always&nbsp;``"culture"``),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;``destination``,&nbsp;``facts``&nbsp;(list&nbsp;of&nbsp;emoji/title/body&nbsp;dicts),&nbsp;and<br>
+&nbsp;&nbsp;&nbsp;&nbsp;``quick_tips``&nbsp;(list&nbsp;of&nbsp;short&nbsp;tip&nbsp;strings).&nbsp;On&nbsp;failure,&nbsp;includes<br>
+&nbsp;&nbsp;&nbsp;&nbsp;an&nbsp;``error``&nbsp;key&nbsp;with&nbsp;a&nbsp;description&nbsp;and&nbsp;empty&nbsp;facts&nbsp;and&nbsp;tips&nbsp;lists.</span></dd></dl>
+</td></tr></table><p>
+<table class="section">
+<tr class="decor data-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Data</strong></td></tr>
+    
+<tr><td class="decor data-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><strong>SYSTEM_PROMPT</strong> = 'You are a knowledgeable travel cultural guide.<span class="repr">\n\n</span>...vice.<span class="repr">\n</span>Return ONLY the JSON object. No extra text.'<br>
+<strong>logger</strong> = &lt;Logger tools.culture_tool (WARNING)&gt;</td></tr></table>
+</body></html>

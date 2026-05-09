@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Python: module workers.run_worker</title>
+</head><body>
+
+<table class="heading">
+<tr class="heading-text decor">
+<td class="title">&nbsp;<br><strong class="title"><a href="workers.html" class="white">workers</a>.run_worker</strong></td>
+<td class="extra"><a href=".">index</a><br><a href="file:/Users/tiki/Desktop/lib_project/workers/run_worker.py">/Users/tiki/Desktop/lib_project/workers/run_worker.py</a></td></tr></table>
+    <p><span class="code">run_worker.py&nbsp;—&nbsp;Background&nbsp;task&nbsp;worker&nbsp;for&nbsp;the&nbsp;Wayfinder&nbsp;agent&nbsp;pipeline.<br>
+&nbsp;<br>
+Continuously&nbsp;polls&nbsp;the&nbsp;database&nbsp;for&nbsp;pending&nbsp;AgentTask&nbsp;rows&nbsp;and&nbsp;processes<br>
+them&nbsp;one&nbsp;at&nbsp;a&nbsp;time&nbsp;using&nbsp;Postgres&nbsp;row-level&nbsp;locking&nbsp;to&nbsp;prevent&nbsp;duplicate<br>
+execution&nbsp;across&nbsp;multiple&nbsp;worker&nbsp;instances.&nbsp;Dispatches&nbsp;each&nbsp;task&nbsp;to&nbsp;the<br>
+appropriate&nbsp;tool&nbsp;runner&nbsp;or&nbsp;the&nbsp;AI&nbsp;supervisor,&nbsp;stores&nbsp;results,&nbsp;and&nbsp;enqueues<br>
+follow-up&nbsp;tasks&nbsp;as&nbsp;directed&nbsp;by&nbsp;the&nbsp;supervisor's&nbsp;agentic&nbsp;loop.<br>
+&nbsp;<br>
+Supported&nbsp;task&nbsp;types:&nbsp;weather,&nbsp;places,&nbsp;transit,&nbsp;alerts,&nbsp;email_alert,<br>
+culture,&nbsp;events,&nbsp;and&nbsp;supervisor_update.<br>
+&nbsp;<br>
+Run&nbsp;from&nbsp;the&nbsp;repo&nbsp;root:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;python&nbsp;workers/run_worker.py</span></p>
+<p>
+<table class="section">
+<tr class="decor pkg-content-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Modules</strong></td></tr>
+    
+<tr><td class="decor pkg-content-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><table><tr><td class="multicolumn"><a href="json.html">json</a><br>
+</td><td class="multicolumn"><a href="os.html">os</a><br>
+</td><td class="multicolumn"><a href="socket.html">socket</a><br>
+</td><td class="multicolumn"><a href="time.html">time</a><br>
+</td></tr></table></td></tr></table><p>
+<table class="section">
+<tr class="decor functions-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Functions</strong></td></tr>
+    
+<tr><td class="decor functions-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><dl><dt><a name="-main"><strong>main</strong></a>() -&gt; 'None'</dt><dd><span class="code">Start&nbsp;the&nbsp;Wayfinder&nbsp;background&nbsp;worker&nbsp;loop.<br>
+&nbsp;<br>
+Prints&nbsp;the&nbsp;worker&nbsp;ID&nbsp;and&nbsp;poll&nbsp;interval,&nbsp;then&nbsp;enters&nbsp;an&nbsp;infinite&nbsp;loop<br>
+inside&nbsp;the&nbsp;Flask&nbsp;application&nbsp;context.&nbsp;On&nbsp;each&nbsp;iteration,&nbsp;attempts&nbsp;to<br>
+claim&nbsp;a&nbsp;pending&nbsp;task&nbsp;and&nbsp;dispatches&nbsp;it&nbsp;to&nbsp;either&nbsp;``_run_supervisor_task``<br>
+or&nbsp;``_run_tool_task``&nbsp;based&nbsp;on&nbsp;its&nbsp;type.&nbsp;Sleeps&nbsp;for&nbsp;``POLL_SECONDS``<br>
+when&nbsp;no&nbsp;tasks&nbsp;are&nbsp;available.&nbsp;Unhandled&nbsp;exceptions&nbsp;are&nbsp;caught,&nbsp;the<br>
+in-progress&nbsp;task&nbsp;is&nbsp;marked&nbsp;failed,&nbsp;and&nbsp;the&nbsp;loop&nbsp;continues&nbsp;after&nbsp;a<br>
+brief&nbsp;sleep&nbsp;to&nbsp;avoid&nbsp;tight&nbsp;error&nbsp;loops.</span></dd></dl>
+</td></tr></table><p>
+<table class="section">
+<tr class="decor data-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Data</strong></td></tr>
+    
+<tr><td class="decor data-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><strong>POLL_SECONDS</strong> = 2.0<br>
+<strong>TOOL_RUNNERS</strong> = {'alerts': &lt;function run&gt;, 'culture': &lt;function run&gt;, 'email_alert': &lt;function run&gt;, 'events': &lt;function run&gt;, 'places': &lt;function run&gt;, 'transit': &lt;function run&gt;, 'weather': &lt;function run&gt;}<br>
+<strong>WORKER_ID</strong> = 'Mac'<br>
+<strong>app</strong> = &lt;Flask 'index'&gt;<br>
+<strong>db</strong> = &lt;SQLAlchemy&gt;</td></tr></table>
+</body></html>

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Python: module tools.weather_tool</title>
+</head><body>
+
+<table class="heading">
+<tr class="heading-text decor">
+<td class="title">&nbsp;<br><strong class="title"><a href="tools.html" class="white">tools</a>.weather_tool</strong></td>
+<td class="extra"><a href=".">index</a><br><a href="file:/Users/tiki/Desktop/lib_project/tools/weather_tool.py">/Users/tiki/Desktop/lib_project/tools/weather_tool.py</a></td></tr></table>
+    <p><span class="code">weather_tool.py&nbsp;—&nbsp;Open-Meteo&nbsp;weather&nbsp;fetcher&nbsp;for&nbsp;Wayfinder.<br>
+&nbsp;<br>
+Retrieves&nbsp;current&nbsp;weather&nbsp;conditions&nbsp;for&nbsp;a&nbsp;traveler's&nbsp;destination&nbsp;using<br>
+the&nbsp;Open-Meteo&nbsp;API&nbsp;(no&nbsp;API&nbsp;key&nbsp;required).&nbsp;Geocodes&nbsp;the&nbsp;destination&nbsp;name<br>
+to&nbsp;coordinates,&nbsp;then&nbsp;fetches&nbsp;temperature,&nbsp;wind&nbsp;speed,&nbsp;humidity,&nbsp;and&nbsp;a<br>
+human-readable&nbsp;condition&nbsp;label&nbsp;derived&nbsp;from&nbsp;WMO&nbsp;weather&nbsp;codes.<br>
+&nbsp;<br>
+Entry&nbsp;point&nbsp;for&nbsp;the&nbsp;worker&nbsp;pipeline:&nbsp;<a href="#-run">run</a>(submission,&nbsp;task_input).</span></p>
+<p>
+<table class="section">
+<tr class="decor pkg-content-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Modules</strong></td></tr>
+    
+<tr><td class="decor pkg-content-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><table><tr><td class="multicolumn"><a href="requests.html">requests</a><br>
+</td><td class="multicolumn"></td><td class="multicolumn"></td><td class="multicolumn"></td></tr></table></td></tr></table><p>
+<table class="section">
+<tr class="decor functions-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Functions</strong></td></tr>
+    
+<tr><td class="decor functions-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><dl><dt><a name="-run"><strong>run</strong></a>(submission, task_input: 'dict') -&gt; 'dict'</dt><dd><span class="code">Fetch&nbsp;current&nbsp;weather&nbsp;for&nbsp;the&nbsp;traveler's&nbsp;destination.<br>
+&nbsp;<br>
+Geocodes&nbsp;the&nbsp;destination&nbsp;from&nbsp;the&nbsp;submission&nbsp;using&nbsp;the&nbsp;Open-Meteo<br>
+geocoding&nbsp;API,&nbsp;then&nbsp;retrieves&nbsp;current&nbsp;conditions&nbsp;including&nbsp;temperature,<br>
+apparent&nbsp;temperature,&nbsp;wind&nbsp;speed,&nbsp;humidity,&nbsp;and&nbsp;a&nbsp;WMO-based&nbsp;condition<br>
+label.&nbsp;No&nbsp;API&nbsp;key&nbsp;is&nbsp;required.<br>
+&nbsp;<br>
+Args:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;submission:&nbsp;WayfinderSubmission&nbsp;model&nbsp;instance.&nbsp;Uses&nbsp;the<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;``desired_destination``&nbsp;attribute&nbsp;as&nbsp;the&nbsp;target&nbsp;location.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;task_input:&nbsp;Dictionary&nbsp;of&nbsp;task-specific&nbsp;input&nbsp;from&nbsp;the&nbsp;worker.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Not&nbsp;currently&nbsp;used&nbsp;but&nbsp;accepted&nbsp;for&nbsp;interface&nbsp;consistency.<br>
+&nbsp;<br>
+Returns:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;A&nbsp;dictionary&nbsp;with&nbsp;weather&nbsp;data&nbsp;including&nbsp;``location``,&nbsp;``country``,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;``latitude``,&nbsp;``longitude``,&nbsp;``temperature``,&nbsp;``feels_like``,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;``condition``,&nbsp;``weather_code``,&nbsp;``wind_speed``,&nbsp;``humidity``,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;and&nbsp;``raw``&nbsp;(the&nbsp;unprocessed&nbsp;Open-Meteo&nbsp;current-weather&nbsp;object).<br>
+&nbsp;&nbsp;&nbsp;&nbsp;On&nbsp;failure,&nbsp;returns&nbsp;a&nbsp;dictionary&nbsp;with&nbsp;an&nbsp;``error``&nbsp;key&nbsp;and<br>
+&nbsp;&nbsp;&nbsp;&nbsp;the&nbsp;``location``&nbsp;string.</span></dd></dl>
+</td></tr></table><p>
+<table class="section">
+<tr class="decor data-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Data</strong></td></tr>
+    
+<tr><td class="decor data-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><strong>WMO_CODES</strong> = {0: 'Clear Sky', 1: 'Mainly Clear', 2: 'Partly Cloudy', 3: 'Overcast', 45: 'Foggy', 48: 'Icy Fog', 51: 'Light Drizzle', 53: 'Moderate Drizzle', 55: 'Heavy Drizzle', 61: 'Light Rain', ...}</td></tr></table>
+</body></html>

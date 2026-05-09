@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Python: module tools.transit_tool</title>
+</head><body>
+
+<table class="heading">
+<tr class="heading-text decor">
+<td class="title">&nbsp;<br><strong class="title"><a href="tools.html" class="white">tools</a>.transit_tool</strong></td>
+<td class="extra"><a href=".">index</a><br><a href="file:/Users/tiki/Desktop/lib_project/tools/transit_tool.py">/Users/tiki/Desktop/lib_project/tools/transit_tool.py</a></td></tr></table>
+    <p><span class="code">transit_tool.py&nbsp;—&nbsp;Google&nbsp;Routes&nbsp;API&nbsp;transit&nbsp;fetcher&nbsp;for&nbsp;Wayfinder.<br>
+&nbsp;<br>
+Looks&nbsp;up&nbsp;bus&nbsp;or&nbsp;rail&nbsp;transit&nbsp;routes&nbsp;between&nbsp;an&nbsp;origin&nbsp;and&nbsp;destination&nbsp;using<br>
+the&nbsp;Google&nbsp;Routes&nbsp;API.&nbsp;Geocodes&nbsp;plain-text&nbsp;place&nbsp;names&nbsp;to&nbsp;lat/lng&nbsp;coordinates<br>
+via&nbsp;the&nbsp;Google&nbsp;Geocoding&nbsp;API,&nbsp;then&nbsp;queries&nbsp;the&nbsp;Routes&nbsp;API&nbsp;for&nbsp;available<br>
+transit&nbsp;options&nbsp;and&nbsp;parses&nbsp;each&nbsp;route&nbsp;into&nbsp;structured&nbsp;step-by-step&nbsp;details.<br>
+&nbsp;<br>
+Worker&nbsp;entry&nbsp;point:&nbsp;<a href="#-run">run</a>(submission,&nbsp;task_input).<br>
+Direct&nbsp;search&nbsp;entry&nbsp;point:&nbsp;<a href="#-search">search</a>(origin,&nbsp;destination,&nbsp;mode).</span></p>
+<p>
+<table class="section">
+<tr class="decor pkg-content-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Modules</strong></td></tr>
+    
+<tr><td class="decor pkg-content-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><table><tr><td class="multicolumn"><a href="logging.html">logging</a><br>
+</td><td class="multicolumn"><a href="os.html">os</a><br>
+</td><td class="multicolumn"><a href="requests.html">requests</a><br>
+</td><td class="multicolumn"></td></tr></table></td></tr></table><p>
+<table class="section">
+<tr class="decor functions-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Functions</strong></td></tr>
+    
+<tr><td class="decor functions-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><dl><dt><a name="-run"><strong>run</strong></a>(submission, task_input: 'dict | None' = None) -&gt; 'dict[str, Any]'</dt><dd><span class="code">Worker&nbsp;entry&nbsp;point&nbsp;for&nbsp;the&nbsp;transit&nbsp;task.<br>
+&nbsp;<br>
+Extracts&nbsp;the&nbsp;origin&nbsp;and&nbsp;destination&nbsp;from&nbsp;the&nbsp;submission&nbsp;and&nbsp;performs<br>
+a&nbsp;default&nbsp;bus&nbsp;route&nbsp;search&nbsp;via&nbsp;``<a href="#-search">search</a>()``.&nbsp;Called&nbsp;by&nbsp;``run_worker.py``<br>
+when&nbsp;processing&nbsp;a&nbsp;task&nbsp;of&nbsp;type&nbsp;``'transit'``.<br>
+&nbsp;<br>
+Args:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;submission:&nbsp;WayfinderSubmission&nbsp;model&nbsp;instance.&nbsp;Uses&nbsp;the&nbsp;``origin``<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;and&nbsp;``desired_destination``&nbsp;attributes&nbsp;as&nbsp;the&nbsp;two&nbsp;endpoints.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;task_input:&nbsp;Dictionary&nbsp;of&nbsp;task-specific&nbsp;input&nbsp;from&nbsp;the&nbsp;worker.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Not&nbsp;currently&nbsp;used&nbsp;but&nbsp;accepted&nbsp;for&nbsp;interface&nbsp;consistency.<br>
+&nbsp;<br>
+Returns:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;A&nbsp;route&nbsp;result&nbsp;dictionary&nbsp;as&nbsp;returned&nbsp;by&nbsp;``<a href="#-search">search</a>()``,&nbsp;containing<br>
+&nbsp;&nbsp;&nbsp;&nbsp;``origin``,&nbsp;``destination``,&nbsp;``mode``,&nbsp;``routes``,&nbsp;and&nbsp;``count``.</span></dd></dl>
+ <dl><dt><a name="-search"><strong>search</strong></a>(origin: 'str', destination: 'str', mode: 'str' = 'BUS') -&gt; 'dict[str, Any]'</dt><dd><span class="code">Search&nbsp;for&nbsp;transit&nbsp;routes&nbsp;between&nbsp;two&nbsp;places&nbsp;by&nbsp;name.<br>
+&nbsp;<br>
+Geocodes&nbsp;both&nbsp;the&nbsp;origin&nbsp;and&nbsp;destination&nbsp;strings,&nbsp;then&nbsp;fetches<br>
+available&nbsp;routes&nbsp;for&nbsp;the&nbsp;specified&nbsp;transit&nbsp;mode.&nbsp;Invalid&nbsp;mode&nbsp;values<br>
+default&nbsp;to&nbsp;``"BUS"``.<br>
+&nbsp;<br>
+Args:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;origin:&nbsp;City&nbsp;name&nbsp;or&nbsp;address&nbsp;string&nbsp;for&nbsp;the&nbsp;departure&nbsp;location.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;destination:&nbsp;City&nbsp;name&nbsp;or&nbsp;address&nbsp;string&nbsp;for&nbsp;the&nbsp;arrival&nbsp;location.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;mode:&nbsp;Transit&nbsp;mode&nbsp;—&nbsp;``"BUS"``&nbsp;or&nbsp;``"RAIL"``&nbsp;(case-insensitive).<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Defaults&nbsp;to&nbsp;``"BUS"``.<br>
+&nbsp;<br>
+Returns:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;A&nbsp;dictionary&nbsp;containing&nbsp;``origin``,&nbsp;``destination``,&nbsp;``mode``,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;``routes``&nbsp;(list&nbsp;of&nbsp;route&nbsp;dicts&nbsp;from&nbsp;``_fetch_routes``),&nbsp;and<br>
+&nbsp;&nbsp;&nbsp;&nbsp;``count``&nbsp;(number&nbsp;of&nbsp;routes&nbsp;found).&nbsp;Returns&nbsp;a&nbsp;dictionary&nbsp;with&nbsp;an<br>
+&nbsp;&nbsp;&nbsp;&nbsp;``error``&nbsp;key&nbsp;and&nbsp;an&nbsp;empty&nbsp;``routes``&nbsp;list&nbsp;if&nbsp;either&nbsp;location<br>
+&nbsp;&nbsp;&nbsp;&nbsp;cannot&nbsp;be&nbsp;geocoded.</span></dd></dl>
+</td></tr></table><p>
+<table class="section">
+<tr class="decor data-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Data</strong></td></tr>
+    
+<tr><td class="decor data-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><strong>API_KEY</strong> = ''<br>
+<strong>GOOGLE_API_KEY</strong> = None<br>
+<strong>GOOGLE_GEOCODE_URL</strong> = 'https://maps.googleapis.com/maps/api/geocode/json'<br>
+<strong>ROUTES_API_URL</strong> = 'https://routes.googleapis.com/directions/v2:computeRoutes'<br>
+<strong>logger</strong> = &lt;Logger tools.transit_tool (WARNING)&gt;</td></tr></table>
+</body></html>

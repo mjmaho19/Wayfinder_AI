@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Python: module notifications.notify</title>
+</head><body>
+
+<table class="heading">
+<tr class="heading-text decor">
+<td class="title">&nbsp;<br><strong class="title"><a href="notifications.html" class="white">notifications</a>.notify</strong></td>
+<td class="extra"><a href=".">index</a><br><a href="file:/Users/tiki/Desktop/lib_project/notifications/notify.py">/Users/tiki/Desktop/lib_project/notifications/notify.py</a></td></tr></table>
+    <p><span class="code">#&nbsp;Copyright&nbsp;Michael&nbsp;Mahoney&nbsp;March&nbsp;2026</span></p>
+<p>
+<table class="section">
+<tr class="decor pkg-content-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Modules</strong></td></tr>
+    
+<tr><td class="decor pkg-content-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><table><tr><td class="multicolumn"><a href="os.html">os</a><br>
+</td><td class="multicolumn"><a href="requests.html">requests</a><br>
+</td><td class="multicolumn"></td><td class="multicolumn"></td></tr></table></td></tr></table><p>
+<table class="section">
+<tr class="decor functions-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Functions</strong></td></tr>
+    
+<tr><td class="decor functions-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><dl><dt><a name="-send_email"><strong>send_email</strong></a>(to_email: 'str', subject: 'str', html: 'str', text: 'str | None' = None, reply_to: 'str | None' = None) -&gt; 'dict[str, Any]'</dt><dd><span class="code">Send&nbsp;an&nbsp;email&nbsp;through&nbsp;the&nbsp;Resend&nbsp;API.<br>
+&nbsp;<br>
+Validates&nbsp;the&nbsp;email&nbsp;configuration,&nbsp;builds&nbsp;the&nbsp;Resend&nbsp;request&nbsp;payload,<br>
+sends&nbsp;the&nbsp;email,&nbsp;and&nbsp;returns&nbsp;a&nbsp;structured&nbsp;status&nbsp;dictionary&nbsp;describing<br>
+whether&nbsp;the&nbsp;message&nbsp;was&nbsp;sent,&nbsp;skipped,&nbsp;or&nbsp;failed.<br>
+&nbsp;<br>
+Args:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;to_email:&nbsp;Recipient&nbsp;email&nbsp;address.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;subject:&nbsp;Email&nbsp;subject&nbsp;line.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;html:&nbsp;HTML&nbsp;body&nbsp;content&nbsp;for&nbsp;the&nbsp;email.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;text:&nbsp;Optional&nbsp;plain-text&nbsp;body&nbsp;content&nbsp;for&nbsp;the&nbsp;email.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;reply_to:&nbsp;Optional&nbsp;reply-to&nbsp;email&nbsp;address.<br>
+&nbsp;<br>
+Returns:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;A&nbsp;dictionary&nbsp;containing&nbsp;the&nbsp;send&nbsp;status,&nbsp;recipient,&nbsp;subject,&nbsp;and<br>
+&nbsp;&nbsp;&nbsp;&nbsp;provider&nbsp;response&nbsp;details&nbsp;when&nbsp;available.</span></dd></dl>
+</td></tr></table><p>
+<table class="section">
+<tr class="decor data-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Data</strong></td></tr>
+    
+<tr><td class="decor data-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><strong>EMAIL_ENABLED</strong> = False<br>
+<strong>EMAIL_FROM</strong> = 'Wayfinder &lt;onboarding@resend.dev&gt;'<br>
+<strong>RESEND_API_KEY</strong> = None<br>
+<strong>RESEND_SEND_URL</strong> = 'https://api.resend.com/emails'</td></tr></table>
+</body></html>

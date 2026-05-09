@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Python: module tools.events_tool</title>
+</head><body>
+
+<table class="heading">
+<tr class="heading-text decor">
+<td class="title">&nbsp;<br><strong class="title"><a href="tools.html" class="white">tools</a>.events_tool</strong></td>
+<td class="extra"><a href=".">index</a><br><a href="file:/Users/tiki/Desktop/lib_project/tools/events_tool.py">/Users/tiki/Desktop/lib_project/tools/events_tool.py</a></td></tr></table>
+    <p><span class="code">events_tool.py&nbsp;—&nbsp;Ticketmaster&nbsp;event&nbsp;fetcher&nbsp;for&nbsp;Wayfinder.<br>
+&nbsp;<br>
+Queries&nbsp;the&nbsp;Ticketmaster&nbsp;Discovery&nbsp;API&nbsp;for&nbsp;local&nbsp;events&nbsp;at&nbsp;the&nbsp;traveler's<br>
+destination&nbsp;within&nbsp;their&nbsp;travel&nbsp;date&nbsp;window.&nbsp;Parses&nbsp;each&nbsp;event&nbsp;into&nbsp;a<br>
+structured&nbsp;dict&nbsp;including&nbsp;name,&nbsp;date,&nbsp;time,&nbsp;venue,&nbsp;genre,&nbsp;price&nbsp;range,<br>
+and&nbsp;ticket&nbsp;URL.<br>
+&nbsp;<br>
+Requires&nbsp;the&nbsp;TICKETMASTER_API_KEY&nbsp;environment&nbsp;variable&nbsp;to&nbsp;be&nbsp;set.<br>
+&nbsp;<br>
+Worker&nbsp;entry&nbsp;point:&nbsp;<a href="#-run">run</a>(submission,&nbsp;task_input).</span></p>
+<p>
+<table class="section">
+<tr class="decor pkg-content-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Modules</strong></td></tr>
+    
+<tr><td class="decor pkg-content-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><table><tr><td class="multicolumn"><a href="logging.html">logging</a><br>
+</td><td class="multicolumn"><a href="os.html">os</a><br>
+</td><td class="multicolumn"><a href="requests.html">requests</a><br>
+</td><td class="multicolumn"></td></tr></table></td></tr></table><p>
+<table class="section">
+<tr class="decor functions-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Functions</strong></td></tr>
+    
+<tr><td class="decor functions-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><dl><dt><a name="-run"><strong>run</strong></a>(submission: 'Any', task_input: 'dict[str, Any] | None' = None) -&gt; 'dict[str, Any]'</dt><dd><span class="code">Fetch&nbsp;local&nbsp;events&nbsp;for&nbsp;the&nbsp;traveler's&nbsp;destination&nbsp;and&nbsp;travel&nbsp;dates.<br>
+&nbsp;<br>
+Parses&nbsp;the&nbsp;travel&nbsp;date&nbsp;range&nbsp;into&nbsp;ISO&nbsp;8601&nbsp;timestamps,&nbsp;queries&nbsp;the<br>
+Ticketmaster&nbsp;Discovery&nbsp;API&nbsp;filtered&nbsp;by&nbsp;city&nbsp;and&nbsp;date&nbsp;window,&nbsp;and<br>
+normalizes&nbsp;each&nbsp;returned&nbsp;event&nbsp;into&nbsp;a&nbsp;structured&nbsp;dictionary.&nbsp;Returns<br>
+early&nbsp;with&nbsp;an&nbsp;error&nbsp;payload&nbsp;if&nbsp;the&nbsp;API&nbsp;key&nbsp;is&nbsp;missing&nbsp;or&nbsp;no&nbsp;destination<br>
+is&nbsp;provided.<br>
+&nbsp;<br>
+Args:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;submission:&nbsp;WayfinderSubmission&nbsp;model&nbsp;instance.&nbsp;Uses&nbsp;the<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;``desired_destination``&nbsp;and&nbsp;``travel_dates``&nbsp;attributes.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;task_input:&nbsp;Dictionary&nbsp;of&nbsp;task-specific&nbsp;input&nbsp;from&nbsp;the&nbsp;worker.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Not&nbsp;currently&nbsp;used&nbsp;but&nbsp;accepted&nbsp;for&nbsp;interface&nbsp;consistency.<br>
+&nbsp;<br>
+Returns:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;A&nbsp;dictionary&nbsp;containing&nbsp;``type``&nbsp;(always&nbsp;``"events"``),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;``destination``,&nbsp;``travel_dates``,&nbsp;``events_found``&nbsp;(integer&nbsp;count),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;and&nbsp;``events``&nbsp;(list&nbsp;of&nbsp;dicts&nbsp;with&nbsp;``name``,&nbsp;``date``,&nbsp;``time``,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;``venue``,&nbsp;``segment``,&nbsp;``genre``,&nbsp;``price``,&nbsp;and&nbsp;``url``).<br>
+&nbsp;&nbsp;&nbsp;&nbsp;On&nbsp;failure,&nbsp;includes&nbsp;an&nbsp;``error``&nbsp;key&nbsp;and&nbsp;an&nbsp;empty&nbsp;``events``&nbsp;list.</span></dd></dl>
+</td></tr></table><p>
+<table class="section">
+<tr class="decor data-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Data</strong></td></tr>
+    
+<tr><td class="decor data-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><strong>DISCOVERY_URL</strong> = 'https://app.ticketmaster.com/discovery/v2/events.json'<br>
+<strong>TICKETMASTER_API_KEY</strong> = None<br>
+<strong>logger</strong> = &lt;Logger tools.events_tool (WARNING)&gt;</td></tr></table>
+</body></html>

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Python: module tools.alerts_tool</title>
+</head><body>
+
+<table class="heading">
+<tr class="heading-text decor">
+<td class="title">&nbsp;<br><strong class="title"><a href="tools.html" class="white">tools</a>.alerts_tool</strong></td>
+<td class="extra"><a href=".">index</a><br><a href="file:/Users/tiki/Desktop/lib_project/tools/alerts_tool.py">/Users/tiki/Desktop/lib_project/tools/alerts_tool.py</a></td></tr></table>
+    <p><span class="code">#&nbsp;Copyright&nbsp;Michael&nbsp;Mahoney&nbsp;February&nbsp;2026</span></p>
+<p>
+<table class="section">
+<tr class="decor pkg-content-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Modules</strong></td></tr>
+    
+<tr><td class="decor pkg-content-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><table><tr><td class="multicolumn"><a href="hashlib.html">hashlib</a><br>
+</td><td class="multicolumn"><a href="os.html">os</a><br>
+</td><td class="multicolumn"><a href="requests.html">requests</a><br>
+</td><td class="multicolumn"></td></tr></table></td></tr></table><p>
+<table class="section">
+<tr class="decor functions-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Functions</strong></td></tr>
+    
+<tr><td class="decor functions-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><dl><dt><a name="-run"><strong>run</strong></a>(submission: 'Any', task_input: 'dict[str, Any] | None') -&gt; 'dict[str, Any]'</dt><dd><span class="code">Fetch&nbsp;destination-specific&nbsp;travel&nbsp;alerts&nbsp;from&nbsp;the&nbsp;News&nbsp;API.<br>
+&nbsp;<br>
+Uses&nbsp;the&nbsp;submission&nbsp;destination&nbsp;to&nbsp;search&nbsp;for&nbsp;recent&nbsp;travel,&nbsp;safety,<br>
+transportation,&nbsp;weather,&nbsp;and&nbsp;advisory-related&nbsp;news.&nbsp;Filters&nbsp;articles&nbsp;for<br>
+relevance,&nbsp;infers&nbsp;severity&nbsp;and&nbsp;category,&nbsp;removes&nbsp;duplicates,&nbsp;and&nbsp;returns<br>
+an&nbsp;overall&nbsp;risk&nbsp;level.<br>
+&nbsp;<br>
+Args:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;submission:&nbsp;Submission&nbsp;object&nbsp;containing&nbsp;the&nbsp;desired&nbsp;destination.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;task_input:&nbsp;Optional&nbsp;task&nbsp;settings&nbsp;such&nbsp;as&nbsp;lookback_days,&nbsp;page_size,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;and&nbsp;min_severity.<br>
+&nbsp;<br>
+Returns:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;A&nbsp;dictionary&nbsp;containing&nbsp;the&nbsp;alert&nbsp;type,&nbsp;destination,&nbsp;overall&nbsp;risk,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;query&nbsp;date,&nbsp;number&nbsp;of&nbsp;alerts&nbsp;found,&nbsp;and&nbsp;alert&nbsp;details.&nbsp;If&nbsp;the&nbsp;API&nbsp;key,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;destination,&nbsp;or&nbsp;request&nbsp;fails,&nbsp;returns&nbsp;an&nbsp;error&nbsp;dictionary&nbsp;with&nbsp;an<br>
+&nbsp;&nbsp;&nbsp;&nbsp;empty&nbsp;alerts&nbsp;list.</span></dd></dl>
+</td></tr></table><p>
+<table class="section">
+<tr class="decor data-decor heading-text">
+<td class="section-title" colspan=3>&nbsp;<br><strong class="bigsection">Data</strong></td></tr>
+    
+<tr><td class="decor data-decor"><span class="code">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td>&nbsp;</td>
+<td class="singlecolumn"><strong>CATEGORY_KEYWORDS</strong> = {'civil_unrest': ['protest', 'strike', 'demonstration', 'civil unrest', 'curfew'], 'security': ['war', 'armed conflict', 'terror', 'terrorist', 'bombing', 'riot', 'violence', 'violent unrest', 'kidnapping', 'hostage', 'coup', 'martial law'], 'transport': ['airport', 'flight', 'airline', 'rail', 'train', 'subway', 'road closure', 'traffic', 'port'], 'weather': ['storm', 'hurricane', 'wildfire', 'flood', 'earthquake', 'blizzard', 'heatwave']}<br>
+<strong>DEFAULT_LOOKBACK_DAYS</strong> = 7<br>
+<strong>DEFAULT_PAGE_SIZE</strong> = 10<br>
+<strong>NEWS_API_KEY</strong> = None<br>
+<strong>NEWS_URL</strong> = 'https://newsapi.org/v2/everything'<br>
+<strong>SEVERITY_KEYWORDS</strong> = {'high': ['war', 'armed conflict', 'missile', 'terror', 'terrorist', 'bombing', 'evacuation', 'state of emergency', 'violent unrest', 'riot', 'kidnapping', 'hostage', 'coup', 'martial law'], 'low': ['delay', 'travel advisory', 'congestion', 'weather', 'closure'], 'medium': ['protest', 'strike', 'demonstration', 'airport disruption', 'flight cancellation', 'flood', 'wildfire', 'hurricane', 'storm warning', 'earthquake', 'road closure', 'curfew', 'civil unrest']}</td></tr></table>
+</body></html>
