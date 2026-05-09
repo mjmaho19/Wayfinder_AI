@@ -70,6 +70,7 @@ EMAIL_FROM=application-name <onboarding@resend.dev>
 MY_EMAIL=your-resend-email
 ROUTES_API_KEY=your-google-routes-api-key
 GOOGLE_MAPS_API_KEY=google-maps-api-key
+TICKETMASTER_API_KEY=your-ticketmaster-api-key
 ```
 
 ### 5. Run the Flask app
@@ -134,6 +135,7 @@ EMAIL_FROM=application-name <onboarding@resend.dev>
 MY_EMAIL=your-resend-email
 ROUTES_API_KEY=your-google-routes-api-key
 GOOGLE_MAPS_API_KEY=google-maps-api-key
+TICKETMASTER_API_KEY=your-ticketmaster-api-key
 ```
 
 ### 5. Run the Flask app
@@ -175,7 +177,8 @@ Each team member or contributor needs to obtain their own API keys and add them 
 | `RESEND_API_KEY` | https://resend.com |
 | `DATABASE_URL` | Your Render Postgres instance, or a local Postgres URL |
 | `GOOGLE_MAPS_API_KEY` |   https://console.cloud.google.com              |
-| `NEWS_API_KEY` |   https://console.cloud.google.com              |
+| `NEWS_API_KEY` |   https://newsapi.org             |
+| `TICKETMASTER_API_KEY` |   https://developer.ticketmaster.com/products-and-docs/apis/discovery-api/v2/             |
 
 ---
 
