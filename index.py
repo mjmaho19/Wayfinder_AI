@@ -815,7 +815,8 @@ def request_trip():
 @app.route("/dashboard", methods=["GET"])
 def dashboard():
     """Render the Wayfinder dashboard."""
-    return render_template("wayfinder_dashboard.html")
+    return render_template("wayfinder_dashboard.html",
+                           google_maps_api_key=os.getenv("GOOGLE_MAPS_API_KEY"))
 
 
 @app.route("/api/weather", methods=["GET"])
