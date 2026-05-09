@@ -21,7 +21,7 @@ from openai import OpenAI
 logger = logging.getLogger(__name__)
 
 _client = OpenAI(
-    api_key=os.getenv("GROQ_API_KEY"),
+    api_key=os.getenv("OPENAI_API_KEY"),
     base_url="https://api.groq.com/openai/v1",
 )
 
