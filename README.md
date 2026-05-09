@@ -172,7 +172,10 @@ Each team member or contributor needs to obtain their own API keys and add them 
 | `GROQ_API_KEY` | https://console.groq.com |
 | `GOOGLE_PLACES_API_KEY` | https://console.cloud.google.com |
 | `ROUTES_API_KEY` | https://console.cloud.google.com (Routes API) |
+| `RESEND_API_KEY` | https://resend.com |
 | `DATABASE_URL` | Your Render Postgres instance, or a local Postgres URL |
+| `GOOGLE_MAPS_API_KEY` |   https://console.cloud.google.com              |
+| `NEWS_API_KEY` |   https://console.cloud.google.com              |
 
 ---
 
