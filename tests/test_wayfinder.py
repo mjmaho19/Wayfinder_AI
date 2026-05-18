@@ -155,12 +155,28 @@ class TestWeatherTool:
 # ══════════════════════════════════════════════════════════════════════════════
 
 class TestTransitTool:
-
     MOCK_GEO_BOSTON = {
-        "results": [{"latitude": 42.36, "longitude": -71.06, "name": "Boston"}]
+        "status": "OK",
+        "results": [{
+            "geometry": {
+                "location": {
+                    "lat": 42.36,
+                    "lng": -71.06,
+                }
+            }
+        }]
     }
+
     MOCK_GEO_NYC = {
-        "results": [{"latitude": 40.71, "longitude": -74.01, "name": "New York"}]
+        "status": "OK",
+        "results": [{
+            "geometry": {
+                "location": {
+                    "lat": 40.71,
+                    "lng": -74.01,
+                }
+            }
+        }]
     }
     MOCK_ROUTES_RESPONSE = {
         "routes": [{
@@ -217,7 +233,9 @@ class TestTransitTool:
 
     @patch("tools.transit_tool.requests.get")
     def test_invalid_origin_returns_error(self, mock_get):
-        mock_get.return_value = MagicMock(json=lambda: {"results": []})
+        mock_get.return_value = MagicMock(
+            json=lambda: {"status": "ZERO_RESULTS", "results": []}
+        )
         from tools.transit_tool import search
         result = search("NotARealPlace", "New York", mode="BUS")
         assert "error" in result
@@ -316,8 +334,18 @@ class TestTransitRoute:
     @patch("tools.transit_tool.requests.get")
     def test_transit_route_returns_routes(self, mock_get, mock_post, client):
         mock_get.side_effect = [
-            MagicMock(json=lambda: {"results": [{"latitude": 42.36, "longitude": -71.06, "name": "Boston"}]}),
-            MagicMock(json=lambda: {"results": [{"latitude": 40.71, "longitude": -74.01, "name": "New York"}]}),
+            MagicMock(json=lambda: {
+                "status": "OK",
+                "results": [{
+                    "geometry": {"location": {"lat": 42.36, "lng": -71.06}}
+                }]
+            }),
+            MagicMock(json=lambda: {
+                "status": "OK",
+                "results": [{
+                    "geometry": {"location": {"lat": 40.71, "lng": -74.01}}
+                }]
+            }),
         ]
         mock_post.return_value = MagicMock(
             json=lambda: {"routes": []},
@@ -377,12 +405,33 @@ class TestChatRoute:
         assert "reply" in data
 
     @patch("agents.chat_agent._client")
-    def test_chat_route_api_failure_returns_fallback(self, mock_client, client):
+    def test_chat_route_api_failure_returns_fallback(self, mock_client, client, flask_app):
+        from index import db, WayfinderSubmission
+
+        with flask_app.app_context():
+            sub = WayfinderSubmission(
+                traveler_name="Chat Route Test",
+                email="test@example.com",
+                origin="Boston, MA",
+                desired_destination="New York, NY",
+                travel_dates="2026-04-01 to 2026-04-05",
+                budget="moderate",
+                preferences="museums and food",
+                raw_request="Plan a trip to New York",
+                status="pending",
+            )
+            db.session.add(sub)
+            db.session.commit()
+            submission_id = sub.id
+
         mock_client.chat.completions.create.side_effect = Exception("API unavailable")
+
         payload = {
+            "submission_id": submission_id,
             "messages": [{"role": "user", "content": "Hello"}],
             "plan_context": ""
         }
+
         res = client.post("/api/chat", json=payload)
         assert res.status_code == 200
         data = json.loads(res.data)
@@ -509,15 +558,20 @@ class TestSupervisor:
 class TestChatAgent:
 
     @patch("agents.chat_agent._client")
-    def test_returns_string_reply(self, mock_client):
+    def test_returns_reply_dict(self, mock_client):
         mock_response = MagicMock()
         mock_response.choices[0].message.content = "Great question! Pack light layers for New York in April."
         mock_client.chat.completions.create.return_value = mock_response
 
         from agents.chat_agent import chat_with_plan
-        reply = chat_with_plan([{"role": "user", "content": "What should I pack?"}], "")
-        assert isinstance(reply, str)
-        assert len(reply) > 0
+        result = chat_with_plan([{"role": "user", "content": "What should I pack?"}], "")
+
+        assert isinstance(result, dict)
+        assert "reply" in result
+        assert "proposed_edit" in result
+        assert isinstance(result["reply"], str)
+        assert len(result["reply"]) > 0
+        assert result["proposed_edit"] is None
 
     @patch("agents.chat_agent._client")
     def test_includes_plan_context_in_call(self, mock_client):
@@ -527,8 +581,9 @@ class TestChatAgent:
 
         from agents.chat_agent import chat_with_plan
         plan = json.dumps({"destination": "New York", "itinerary": [{"day": 1}]})
-        chat_with_plan([{"role": "user", "content": "Suggest museums"}], plan)
+        result = chat_with_plan([{"role": "user", "content": "Suggest museums"}], plan)
 
+        assert isinstance(result, dict)
         call_args = mock_client.chat.completions.create.call_args
         messages = call_args[1]["messages"]
         system_msg = messages[0]["content"]
@@ -539,9 +594,13 @@ class TestChatAgent:
         mock_client.chat.completions.create.side_effect = Exception("Connection refused")
 
         from agents.chat_agent import chat_with_plan
-        reply = chat_with_plan([{"role": "user", "content": "Hello"}], "")
-        assert isinstance(reply, str)
-        assert "trouble" in reply.lower() or "sorry" in reply.lower()
+        result = chat_with_plan([{"role": "user", "content": "Hello"}], "")
+
+        assert isinstance(result, dict)
+        assert "reply" in result
+        assert "proposed_edit" in result
+        assert result["proposed_edit"] is None
+        assert "trouble" in result["reply"].lower() or "sorry" in result["reply"].lower()
 
     @patch("agents.chat_agent._client")
     def test_multi_turn_conversation(self, mock_client):
@@ -555,13 +614,15 @@ class TestChatAgent:
             {"role": "assistant", "content": "It will be around 15°C."},
             {"role": "user", "content": "Should I bring a jacket?"},
         ]
-        reply = chat_with_plan(history, "")
-        assert isinstance(reply, str)
+        result = chat_with_plan(history, "")
+
+        assert isinstance(result, dict)
+        assert "reply" in result
+        assert isinstance(result["reply"], str)
 
         call_args = mock_client.chat.completions.create.call_args
         messages = call_args[1]["messages"]
-        # system + 3 history messages
-        assert len(messages) == 4
+        assert len(messages) == 4  # system + 3 history messages
 
 
 # ══════════════════════════════════════════════════════════════════════════════
