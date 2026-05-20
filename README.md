@@ -114,44 +114,91 @@ EMAIL_FROM=Wayfinder AI <onboarding@resend.dev>
 MY_EMAIL=your-email@example.com
 ```
 ---
-
 ## Database Setup
 
-Wayfinder AI was developed and tested using a **hosted PostgreSQL database**, not a local database. This project was designed to connect to PostgreSQL through the `DATABASE_URL` environment variable. The application does **not** create its own database server. Instead, it reads `DATABASE_URL` from `.env`, connects to that PostgreSQL instance, and uses Flask-Migrate / Alembic migrations to create or update the application tables inside that database.
+Wayfinder AI was developed and tested using a **hosted PostgreSQL database on Render**, not a local database. The application is designed to connect to PostgreSQL through the `DATABASE_URL` environment variable in `.env`.
 
-This distinction matters:
+This means:
 
-* the PostgreSQL **server** must already exist
-* the PostgreSQL **database** must already exist
-* `DATABASE_URL` tells the app and worker where that database is
-* `flask --app index db upgrade` applies the schema to that database
+- the PostgreSQL **server** must already exist
+- the PostgreSQL **database** must already exist
+- `DATABASE_URL` tells Flask-SQLAlchemy and the worker which database to use
+- `flask --app index db upgrade` applies the project schema to that database
+
+The application does **not** create a PostgreSQL server by itself. Instead:
+
+1. `index.py` defines the SQLAlchemy models for the application tables
+2. `DATABASE_URL` tells Flask-SQLAlchemy which PostgreSQL database to connect to
+3. Flask-Migrate / Alembic reads the migration files in the `migrations/` folder
+4. `flask --app index db upgrade` creates or updates the corresponding tables in the target database
+
+### How the database models in `index.py` relate to setup
+
+The models in `index.py` define the application schema. These include tables such as:
+
+- `WayfinderSubmission`
+- `AgentTask`
+- `ToolResult`
+- `TripPlan`
+- `PlanEdit`
+
+Those classes describe the structure of the tables, but they do **not** create a PostgreSQL server on their own. The tables only become real PostgreSQL tables when migrations are run against the database referenced by `DATABASE_URL`.
+
+In practical terms:
+
+- `index.py` defines the tables
+- `DATABASE_URL` points to the database
+- `flask --app index db upgrade` initializes the tables in that database
 
 ### Database setup actually used for this project
 
-The project used a **hosted PostgreSQL database URL provided separately**. That is the setup used during development and testing.
+The actual development setup for Wayfinder AI used a **hosted PostgreSQL database on Render**. That is the primary setup used during development and testing.
 
-That means the intended workflow is:
+The development workflow was:
 
-1. obtain the hosted PostgreSQL URL
-2. place that URL in `.env` as `DATABASE_URL`
-3. run migrations against that hosted database
-4. run the Flask app
-5. run the worker
-6. make sure both the Flask app and worker are using the same `.env` file so they connect to the same hosted database
+1. create a PostgreSQL database on Render
+2. copy the database URL provided by Render
+3. place that URL in `.env` as `DATABASE_URL`
+4. run migrations with `flask --app index db upgrade`
+5. run the Flask app
+6. run the worker
+7. make sure both the Flask app and worker use the same `.env` file so they connect to the same database
 
-### Step-by-step: connect to the hosted database used by this project
+---
 
-#### 1. Make sure PostgreSQL is **not** something you need to install locally for this setup
+### Option 1 — Hosted PostgreSQL database on Render (the setup used for this project)
 
-For the actual project setup, a hosted database was used. The database server already exists remotely. The only requirement is that `DATABASE_URL` points to that hosted database.
+This is the setup that was actually used during development and testing.
 
-#### 2. Copy `.env.example` to `.env`
+#### 1. Create a PostgreSQL database on Render
+
+1. Go to [https://render.com](https://render.com)
+2. Sign in or create an account
+3. Open the Render dashboard
+4. Click **New**
+5. Select **PostgreSQL**
+6. Enter the required database information, such as:
+   - database name
+   - user
+   - region
+   - plan
+7. Create the database
+
+Once Render finishes provisioning the database, it will provide connection details.
+
+#### 2. Copy the database connection URL from Render
+
+In the Render PostgreSQL dashboard, locate the database connection information and copy the **External Database URL**.
+
+That URL is what Wayfinder AI uses for `DATABASE_URL`.
+
+#### 3. Copy `.env.example` to `.env`
 
 macOS / Linux:
 
 ```bash
 cp .env.example .env
-```
+````
 
 Windows PowerShell:
 
@@ -159,32 +206,41 @@ Windows PowerShell:
 Copy-Item .env.example .env
 ```
 
-#### 3. Open `.env` in a text editor
+#### 4. Open `.env` in a text editor
 
-Add the hosted database URL exactly as provided:
+Paste the Render database URL into `.env` exactly as provided:
 
 ```env
-DATABASE_URL=the-hosted-postgresql-url-provided-separately
+DATABASE_URL=the-render-postgresql-url
 ```
 
 Do not add extra quotes unless the URL itself requires them.
 
-#### 4. Add the rest of the required environment variables
+#### 5. Add the rest of the required environment variables
 
 At minimum, add:
 
 ```env
 FLASK_KEY=change-me
-DATABASE_URL=the-hosted-postgresql-url-provided-separately
+DATABASE_URL=the-render-postgresql-url
 GROQ_API_KEY=your-groq-api-key
 GOOGLE_PLACES_API_KEY=your-google-places-api-key
 ROUTES_API_KEY=your-google-routes-api-key
 GOOGLE_MAPS_API_KEY=your-google-maps-api-key
 ```
 
-Add optional keys if you want alerts, events, and email notifications.
+Optional values for events, alerts, and email:
 
-#### 5. Activate the virtual environment
+```env
+NEWS_API_KEY=your-news-api-key
+TICKETMASTER_API_KEY=your-ticketmaster-api-key
+RESEND_API_KEY=your-resend-api-key
+EMAIL_ENABLED=true
+EMAIL_FROM=Wayfinder AI <onboarding@resend.dev>
+MY_EMAIL=your-email@example.com
+```
+
+#### 6. Activate the virtual environment
 
 macOS / Linux:
 
@@ -198,13 +254,13 @@ Windows PowerShell:
 .venv\Scripts\Activate.ps1
 ```
 
-#### 6. Install dependencies if not already installed
+#### 7. Install dependencies if not already installed
 
 ```bash
 pip install -r requirements.txt
 ```
 
-#### 7. Run the migrations against the hosted database (if there are any)
+#### 8. Run the migrations against the Render database
 
 ```bash
 flask --app index db upgrade
@@ -216,14 +272,161 @@ What this does:
 * reads the migration files in `migrations/`
 * creates or updates the Wayfinder AI tables inside that hosted database
 
-#### 8. Verify that migrations completed successfully
+This is the step that initializes the database schema on Render.
+
+If the database is already up to date, this command should not make additional schema changes.
+
+#### 9. Verify that migrations completed successfully
 
 A successful migration step should finish without database connection errors. If there is a problem, it usually means:
 
 * `DATABASE_URL` is wrong
-* the hosted database is unavailable
+* the Render database is unavailable
 * network access is blocked
 * credentials in the URL are invalid
+
+#### 10. Start the Flask app
+
+```bash
+python -m flask --app index run --debug
+```
+
+#### 11. Start the worker in a second terminal
+
+macOS / Linux:
+
+```bash
+PYTHONPATH=. python workers/run_worker.py
+```
+
+Windows PowerShell:
+
+```powershell
+$env:PYTHONPATH="."
+python workers/run_worker.py
+```
+
+#### 12. Confirm both processes are using the same `.env`
+
+This is important. The Flask app and the worker must both read the same `DATABASE_URL`. Otherwise:
+
+* the web app may write to one database
+* the worker may read from a different database
+* tasks will appear to be stuck or missing
+
+#### 13. Open the app in the browser
+
+```text
+http://127.0.0.1:5000
+```
+
+#### 14. Submit a test trip
+
+A correct hosted-database setup should allow you to:
+
+* submit a trip request
+* create rows in the hosted PostgreSQL database
+* have the worker pick up tasks
+* see progress on the dashboard
+
+---
+
+### Option 2 — Local PostgreSQL database (supported as an alternative, but not the setup used for this project)
+
+A local PostgreSQL database can also be used, but **this was not the setup used during development**. It is included here only so another developer can recreate the schema locally if desired.
+
+#### 1. Install PostgreSQL locally
+
+Install PostgreSQL on the machine and make sure the PostgreSQL service is running.
+
+#### 2. Create a local database
+
+Create a database named `wayfinder_ai`:
+
+```bash
+createdb wayfinder_ai
+```
+
+#### 3. Copy `.env.example` to `.env`
+
+macOS / Linux:
+
+```bash
+cp .env.example .env
+```
+
+Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+#### 4. Set `DATABASE_URL` in `.env`
+
+Example:
+
+```env
+DATABASE_URL=postgresql://username:password@localhost:5432/wayfinder_ai
+```
+
+Replace:
+
+* `username` with the local PostgreSQL username
+* `password` with the local PostgreSQL password
+* `localhost:5432` with the correct host and port if different
+* `wayfinder_ai` with the actual local database name
+
+#### 5. Add the rest of the required environment variables
+
+At minimum:
+
+```env
+FLASK_KEY=change-me
+DATABASE_URL=postgresql://username:password@localhost:5432/wayfinder_ai
+GROQ_API_KEY=your-groq-api-key
+GOOGLE_PLACES_API_KEY=your-google-places-api-key
+ROUTES_API_KEY=your-google-routes-api-key
+GOOGLE_MAPS_API_KEY=your-google-maps-api-key
+```
+
+Optional values for events, alerts, and email:
+
+```env
+NEWS_API_KEY=your-news-api-key
+TICKETMASTER_API_KEY=your-ticketmaster-api-key
+RESEND_API_KEY=your-resend-api-key
+EMAIL_ENABLED=true
+EMAIL_FROM=Wayfinder AI <onboarding@resend.dev>
+MY_EMAIL=your-email@example.com
+```
+
+#### 6. Activate the virtual environment
+
+macOS / Linux:
+
+```bash
+source .venv/bin/activate
+```
+
+Windows PowerShell:
+
+```powershell
+.venv\Scripts\Activate.ps1
+```
+
+#### 7. Install dependencies if not already installed
+
+```bash
+pip install -r requirements.txt
+```
+
+#### 8. Run migrations
+
+```bash
+flask --app index db upgrade
+```
+
+This creates the same Wayfinder AI tables in the local database.
 
 #### 9. Start the Flask app
 
@@ -248,11 +451,7 @@ python workers/run_worker.py
 
 #### 11. Confirm both processes are using the same `.env`
 
-This is important. The Flask app and the worker must both read the same `DATABASE_URL`. Otherwise:
-
-* the web app may write to one database
-* the worker may read from a different database
-* tasks will appear to be stuck or missing
+As with the hosted setup, the Flask app and the worker must point to the same local `DATABASE_URL`.
 
 #### 12. Open the app in the browser
 
@@ -262,62 +461,23 @@ http://127.0.0.1:5000
 
 #### 13. Submit a test trip
 
-A correct hosted-database setup should allow you to:
+A correct local setup should allow you to:
 
 * submit a trip request
-* create rows in the hosted database
+* create rows in the local PostgreSQL database
 * have the worker pick up tasks
 * see progress on the dashboard
 
-### Important clarification about the models in `index.py`
-
-The models define the table structure for the application, but they do **not** create a PostgreSQL server by themselves.
-
-In practical terms:
-
-* the models describe tables like `WayfinderSubmission`, `AgentTask`, `ToolResult`, `TripPlan`, and `PlanEdit`
-* `DATABASE_URL` tells SQLAlchemy which PostgreSQL database to use
-* `flask --app index db upgrade` creates those tables in that database
-
-So the hosted database was not created automatically by the model classes alone. The hosted database server already existed, and the migrations created the application tables inside it.
-
-### If someone wants to create a local database anyway
-
-A local PostgreSQL database **could** be created manually and used with these same models and migrations, but that was **not** how this project was designed, developed, or tested.
-
-This section is included only to explain how someone could reproduce the schema locally if they chose to do so.
-
-#### What would be required for a local database
-
-1. install PostgreSQL locally
-2. start the PostgreSQL server
-3. create a local database manually
-4. set `DATABASE_URL` to point to that local database
-5. run `flask --app index db upgrade`
-
-#### Example local connection string
-
-```env
-DATABASE_URL=postgresql://username:password@localhost:5432/wayfinder_ai
-```
-
-#### Example local workflow
-
-After creating a local PostgreSQL database named `wayfinder_ai`, a user would run:
-
-```bash
-flask --app index db upgrade
-```
-
-That would create the same Wayfinder AI tables in the local database.
-
-#### Final clarification
+### Final clarification
 
 To be explicit:
 
-* **the actual project used a hosted PostgreSQL database**
-* **the local database approach was not the development setup**
-* the local approach is only a hypothetical alternative for someone who wants to recreate the schema independently
+* **the actual project used a hosted PostgreSQL database on Render**
+* **the local PostgreSQL setup was not the development setup**
+* both setups rely on `DATABASE_URL`
+* the models in `index.py` define the schema
+* the migrations initialize that schema in the selected database
+* the Flask app and worker must use the same `.env` file so they connect to the same database
 
 ---
 
@@ -349,13 +509,34 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-### 5. Open `.env` and fill in the required values
+### 5. Choose a database setup method
+
+Choose **one** of the following:
+
+* **Hosted PostgreSQL on Render**: paste the Render database URL into `DATABASE_URL`
+* **Local PostgreSQL**: create a local PostgreSQL database and set `DATABASE_URL` to the local connection string
+
+Examples:
+
+Hosted:
+
+```env
+DATABASE_URL=the-render-postgresql-url
+```
+
+Local:
+
+```env
+DATABASE_URL=postgresql://username:password@localhost:5432/wayfinder_ai
+```
+
+### 6. Open `.env` and fill in the required values
 
 At minimum:
 
 ```env
 FLASK_KEY=change-me
-DATABASE_URL=the-hosted-postgresql-url-provided-separately
+DATABASE_URL=your-selected-postgresql-url
 GROQ_API_KEY=your-groq-api-key
 GOOGLE_PLACES_API_KEY=your-google-places-api-key
 ROUTES_API_KEY=your-google-routes-api-key
@@ -373,37 +554,41 @@ EMAIL_FROM=Wayfinder AI <onboarding@resend.dev>
 MY_EMAIL=your-email@example.com
 ```
 
-### 6. Apply database migrations to the hosted database
+### 7. Apply database migrations
 
 ```bash
 flask --app index db upgrade
 ```
 
-### 7. Start the Flask app
+### 8. Start the Flask app
 
 ```bash
 python -m flask --app index run --debug
 ```
 
-### 8. In a second terminal, activate the environment again
+### 9. In a second terminal, activate the environment again
 
 ```bash
 source .venv/bin/activate
 ```
 
-### 9. In that second terminal, run the worker
+### 10. In that second terminal, run the worker
 
 ```bash
 PYTHONPATH=. python workers/run_worker.py
 ```
 
-### 10. Open the app
+### 11. Confirm both processes use the same `.env`
+
+Both the Flask app and the worker must use the same `DATABASE_URL`.
+
+### 12. Open the app
 
 ```text
 http://127.0.0.1:5000
 ```
 
-### 11. Verify the setup
+### 13. Verify the setup
 
 A successful setup should allow you to:
 
@@ -460,13 +645,34 @@ pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
 
-### 6. Open `.env` and fill in the required values
+### 6. Choose a database setup method
+
+Choose **one** of the following:
+
+* **Hosted PostgreSQL on Render**: paste the Render database URL into `DATABASE_URL`
+* **Local PostgreSQL**: create a local PostgreSQL database and set `DATABASE_URL` to the local connection string
+
+Examples:
+
+Hosted:
+
+```env
+DATABASE_URL=the-render-postgresql-url
+```
+
+Local:
+
+```env
+DATABASE_URL=postgresql://username:password@localhost:5432/wayfinder_ai
+```
+
+### 7. Open `.env` and fill in the required values
 
 At minimum:
 
 ```env
 FLASK_KEY=change-me
-DATABASE_URL=the-hosted-postgresql-url-provided-separately
+DATABASE_URL=your-selected-postgresql-url
 GROQ_API_KEY=your-groq-api-key
 GOOGLE_PLACES_API_KEY=your-google-places-api-key
 ROUTES_API_KEY=your-google-routes-api-key
@@ -484,19 +690,19 @@ EMAIL_FROM=Wayfinder AI <onboarding@resend.dev>
 MY_EMAIL=your-email@example.com
 ```
 
-### 7. Apply database migrations to the hosted database
+### 8. Apply database migrations
 
 ```powershell
 python -m flask --app index db upgrade
 ```
 
-### 8. Start the Flask app
+### 9. Start the Flask app
 
 ```powershell
 python -m flask --app index run --debug
 ```
 
-### 9. Open a second PowerShell window
+### 10. Open a second PowerShell window
 
 Activate the environment again:
 
@@ -504,20 +710,24 @@ Activate the environment again:
 .venv\Scripts\Activate.ps1
 ```
 
-### 10. Run the worker
+### 11. Run the worker
 
 ```powershell
 $env:PYTHONPATH="."
 python workers/run_worker.py
 ```
 
-### 11. Open the app
+### 12. Confirm both processes use the same `.env`
+
+Both the Flask app and the worker must use the same `DATABASE_URL`.
+
+### 13. Open the app
 
 ```text
 http://127.0.0.1:5000
 ```
 
-### 12. Verify the setup
+### 14. Verify the setup
 
 A successful setup should allow you to:
 
